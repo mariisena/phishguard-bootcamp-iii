@@ -1,0 +1,10 @@
+# PhishGuard - dependencias do projeto
+# Stack normativa definida em docs/SDD.md (RNF-08) e ADR-0001.
+
+# Runtime da API
+fastapi>=0.115
+uvicorn>=0.30
+pydantic>=2.7
+
+# Test Harness
+pytest>=8.0

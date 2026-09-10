@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Testes e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+test-report.xml
+
+# Editores e SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Variaveis de ambiente
+.env
+.env.local
