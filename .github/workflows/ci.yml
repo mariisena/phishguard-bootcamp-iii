@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-harness:
+    name: Test Harness (pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configura Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Instala dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Executa a suite de testes
+        run: |
+          python -m pytest -v --junitxml=test-report.xml | tee logs_test_harness.txt
+
+      - name: Publica evidencias de execucao
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-test-harness
+          path: |
+            logs_test_harness.txt
+            test-report.xml
+          retention-days: 30
+
+  docker-harness:
+    name: Test Harness (Docker)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Roda a suite dentro do container
+        run: docker compose run --rm test
