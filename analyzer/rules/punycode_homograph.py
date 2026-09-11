@@ -3,7 +3,7 @@
 from analyzer.rules.base import HeuristicResult, fired, not_triggered
 from analyzer.url_normalizer import ParsedURL
 
-REASON = "punycode_ou_homografo"
+REASON = "punycode_ou_unicode_suspeito"
 
 
 def check(parsed: ParsedURL) -> HeuristicResult:

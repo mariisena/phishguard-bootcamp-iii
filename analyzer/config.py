@@ -5,18 +5,23 @@ ajuste de regra de negócio seja feito em um único lugar e refletido nos testes
 """
 
 # Pontuação de cada heurística (chave = código do motivo retornado pela heurística).
+# Chaves, valores e ordem seguem a Tabela 4.1 do SDD, que é a fonte normativa.
 POINTS = {
-    "ip_literal_no_host": 30,
-    "arroba_na_url": 25,
+    "host_ip": 25,
+    "uso_arroba_userinfo": 25,
     "subdominios_excessivos": 15,
     "tld_suspeito": 15,
-    "encurtador_conhecido_destino_nao_verificado": 10,
-    "possivel_impersonacao_marca": 35,
-    "punycode_ou_homografo": 30,
+    "encurtador_conhecido_destino_nao_verificado": 15,
+    "possivel_impersonacao_marca": 25,
+    "punycode_ou_unicode_suspeito": 25,
     "sem_https": 10,
-    "url_muito_longa": 5,
-    "palavra_chave_sensivel_no_path": 10,
+    "url_muito_longa": 10,
+    "palavra_chave_sensivel_no_path_query": 20,
 }
+
+# RN-01: intervalo válido do score final (clamp aplicado ao fim da agregação).
+SCORE_MIN = 0
+SCORE_MAX = 100
 
 # RN-02: limiares de classificação — score < LOW = segura, < HIGH = suspeita, >= HIGH = perigosa.
 THRESHOLDS = (30, 60)
