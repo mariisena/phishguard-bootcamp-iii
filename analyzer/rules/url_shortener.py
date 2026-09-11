@@ -1,8 +1,8 @@
 """RF-09: domínio de encurtador de URL conhecido (RN-08: sinaliza, não bloqueia)."""
 
-from phishguard import config
-from phishguard.heuristics.base import HeuristicResult, fired, not_triggered
-from phishguard.url_normalizer import ParsedURL
+from analyzer import config
+from analyzer.rules.base import HeuristicResult, fired, not_triggered
+from analyzer.url_normalizer import ParsedURL
 
 REASON = "encurtador_conhecido_destino_nao_verificado"
 
