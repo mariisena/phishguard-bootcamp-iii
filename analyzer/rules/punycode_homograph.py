@@ -7,13 +7,12 @@ REASON = "punycode_ou_unicode_suspeito"
 
 
 def check(parsed: ParsedURL) -> HeuristicResult:
-    labels = parsed.host.split(".")
-    if any(label.startswith("xn--") for label in labels):
+    # SDD §4.2: dispara se o host original possuir qualquer caractere não ASCII...
+    if not parsed.host_original.isascii():
         return fired(REASON)
 
-    try:
-        parsed.host.encode("ascii")
-    except UnicodeEncodeError:
+    # ...ou se a forma canônica IDNA contiver label iniciado por xn--.
+    if any(label.startswith("xn--") for label in parsed.host.split(".")):
         return fired(REASON)
 
     return not_triggered()

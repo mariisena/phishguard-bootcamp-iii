@@ -15,9 +15,9 @@ REASON = "palavra_chave_sensivel_no_path_query"
 
 
 def check(parsed: ParsedURL) -> HeuristicResult:
-    # RF-14: busca case-insensitive restrita a path e query. O fragmento não participa da
-    # pontuação e já foi separado pelo normalizador.
-    alvo = f"{parsed.path} {parsed.query}".lower()
+    # RF-14 / N-08: busca case-insensitive restrita a path e query, usando a visão em minúsculas
+    # produzida pelo normalizador. O fragmento não participa da pontuação.
+    alvo = f"{parsed.path_lower} {parsed.query_lower}"
     if any(keyword in alvo for keyword in config.SENSITIVE_KEYWORDS):
         return fired(REASON)
     return not_triggered()
