@@ -50,6 +50,19 @@ def test_rn04_blocklist_forca_perigosa():
     assert resultado.reasons == ["dominio_blocklist"]
 
 
+def test_n07_www_ignorado_na_consulta_mas_preservado_na_resposta():
+    # A consulta remove o `www.`, mas `normalized_host` mantém o host de entrada.
+    resultado = calculate_risk("http://www.site-legitimo.com/login", LISTAS)
+    assert resultado.reasons == ["dominio_allowlist"]
+    assert resultado.normalized_host == "www.site-legitimo.com"
+
+
+def test_rf15_subdominio_de_item_da_allowlist_nao_e_liberado():
+    # RF-15 exige correspondência exata: o subdomínio segue para a análise heurística.
+    resultado = calculate_risk("http://login.site-legitimo.com/verify", LISTAS)
+    assert resultado.reasons == ["sem_https", "palavra_chave_sensivel_no_path_query"]
+
+
 def test_rn03_allowlist_avaliada_antes_da_blocklist():
     # Interseção por erro de configuração: RN-03 prevalece (nota do SDD §4).
     ambas = DomainLists(allowlist=frozenset({"exemplo.com"}), blocklist=frozenset({"exemplo.com"}))
