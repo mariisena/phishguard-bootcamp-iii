@@ -1,25 +1,23 @@
-from urllib.parse import urlparse
-from typing import Dict, Union, Optional
+"""RF-14: palavra-chave sensível no path ou na query.
 
-# Lista normativa de palavras-chave sensíveis (SDD.md, Seção 4.2)
-SENSITIVE_KEYWORDS = {
-    "login", "verify", "secure", "update", 
-    "confirm", "account", "senha", "banco", "wp-login"
-}
+Esta heurística apenas detecta a presença da palavra-chave. A regra de que ela só soma pontos
+quando outra heurística (RF-05 a RF-13) também disparou — RN-06 — é responsabilidade do `scorer`,
+não desta função, o que a mantém pura e de responsabilidade única.
 
-def evaluate_suspicious_keywords(url: str) -> Optional[Dict[str, Union[int, str]]]:
-    try:
-        parsed = urlparse(url)
-        # RF-14 determina busca restrita ao path e query
-        target_text = f"{parsed.path} {parsed.query}".lower()
-        
-        for keyword in SENSITIVE_KEYWORDS:
-            if keyword in target_text:
-                return {
-                    "score": 20,
-                    "flag": "palavra_chave_sensivel_no_path_query"
-                }
-    except Exception:
-        pass
-        
-    return None
+RN-07: múltiplas palavras ou múltiplas ocorrências não acumulam; a heurística dispara uma só vez.
+"""
+
+from analyzer import config
+from analyzer.rules.base import HeuristicResult, fired, not_triggered
+from analyzer.url_normalizer import ParsedURL
+
+REASON = "palavra_chave_sensivel_no_path_query"
+
+
+def check(parsed: ParsedURL) -> HeuristicResult:
+    # RF-14 / N-08: busca case-insensitive restrita a path e query, usando a visão em minúsculas
+    # produzida pelo normalizador. O fragmento não participa da pontuação.
+    alvo = f"{parsed.path_lower} {parsed.query_lower}"
+    if any(keyword in alvo for keyword in config.SENSITIVE_KEYWORDS):
+        return fired(REASON)
+    return not_triggered()
