@@ -1,23 +1,50 @@
-import pytest
-from analyzer.rules.at_symbol import evaluate_at_symbol
+"""RF-06: uso do caractere @ na seção de autoridade/userinfo.
 
-def test_evaluate_at_symbol_detected():
-    expected = {"score": 2, "flag": "O uso de arroba na URL foi detectado"}
-    assert evaluate_at_symbol("http://google.com@site-falso.com") == expected
+Critério do SDD §4.2: o @ conta apenas entre "//" e o início de path/query/fragmento.
+"""
 
-def test_evaluate_at_symbol_not_detected():
-    assert evaluate_at_symbol("https://site-legitimo.com/login") is None
+from analyzer.rules import at_symbol
+from analyzer.url_normalizer import normalize
 
-def test_evaluate_at_symbol_multiple_at():
-    expected = {"score": 2, "flag": "O uso de arroba na URL foi detectado"}
-    assert evaluate_at_symbol("http://teste@google.com@site-falso.com/login") == expected
 
-def test_evaluate_at_symbol_in_query_parameters():
-    assert evaluate_at_symbol("https://site-legitimo.com/login?email=user@email.com") is None
+def check(url):
+    return at_symbol.check(normalize(url))
 
-def test_evaluate_at_symbol_in_fragment():
-    assert evaluate_at_symbol("https://site-legitimo.com/index.html#contact@email.com") is None
 
-def test_evaluate_at_symbol_in_path():
-    assert evaluate_at_symbol("https://site-legitimo.com/profile/@username") is None
+# --- casos positivos ---
 
+def test_arroba_na_autoridade_dispara():
+    resultado = check("http://google.com@site-falso.com/home")
+    assert resultado.triggered is True
+    assert resultado.reason == "uso_arroba_userinfo"
+
+
+def test_userinfo_com_usuario_e_senha_dispara():
+    assert check("http://usuario:senha@site-falso.com/home").triggered is True
+
+
+# --- casos negativos ---
+
+def test_url_sem_arroba_nao_dispara():
+    assert check("https://site-legitimo.com/login").triggered is False
+
+
+# --- casos de borda ---
+
+def test_arroba_apenas_na_query_nao_dispara():
+    assert check("https://site-legitimo.com/login?email=user@email.com").triggered is False
+
+
+def test_arroba_apenas_no_path_nao_dispara():
+    assert check("https://site-legitimo.com/profile/@username").triggered is False
+
+
+def test_arroba_apenas_no_fragmento_nao_dispara():
+    assert check("https://site-legitimo.com/index.html#contato@email.com").triggered is False
+
+
+def test_multiplos_arrobas_disparam_uma_unica_vez():
+    # RN-07: a heurística devolve um único resultado, independente do número de ocorrências.
+    resultado = check("http://teste@google.com@site-falso.com/login")
+    assert resultado.triggered is True
+    assert resultado.reason == "uso_arroba_userinfo"

@@ -1,39 +1,193 @@
+"""Orquestração do scorer: precedência de listas, agregação e RN-01 a RN-07.
+
+Os scores esperados vêm da Tabela 4.1 do SDD, não da leitura de `config.POINTS`, para que uma
+alteração indevida de peso quebre a suíte.
+"""
+
 import pytest
-from analyzer.scorer import calculate_risk
 
-def test_scorer_segura_zero_points():
-    result = calculate_risk("https://site-legitimo.com/home", "site-legitimo.com", "/home")
-    assert result["score"] == 0
-    assert result["classification"] == "segura"
-    assert result["reasons"] == []
+from analyzer.blocklist import DomainLists
+from analyzer.scorer import calculate_risk, classify
+from analyzer.url_normalizer import InvalidURLError
 
-def test_scorer_segura_single_heuristic():
-    result = calculate_risk("http://user@site-legitimo.com/home", "site-legitimo.com", "/home")
-    assert result["score"] == 25
-    assert result["classification"] == "segura"
-    assert result["reasons"] == ["uso_arroba_userinfo"]
+# Listas de teste injetadas — a suíte não depende de arquivos externos (RNF-02).
+LISTAS = DomainLists(
+    allowlist=frozenset({"site-legitimo.com"}),
+    blocklist=frozenset({"malware.test"}),
+)
 
-def test_scorer_suspeita_ip_and_keyword():
-    result = calculate_risk("http://192.168.0.1/login", "192.168.0.1", "/login")
-    assert result["score"] == 45
-    assert result["classification"] == "suspeita"
-    assert result["reasons"] == ["host_ip", "palavra_chave_sensivel_no_path_query"]
+VAZIAS = DomainLists(allowlist=frozenset(), blocklist=frozenset())
 
-def test_scorer_perigosa_all_heuristics():
-    result = calculate_risk("http://user@192.168.0.1/login", "192.168.0.1", "/login")
-    assert result["score"] == 70
-    assert result["classification"] == "perigosa"
-    assert result["reasons"] == ["host_ip", "uso_arroba_userinfo", "palavra_chave_sensivel_no_path_query"]
 
-def test_scorer_rn06_keyword_ignored_without_other_signals():
-    result = calculate_risk("https://site-legitimo.com/login", "site-legitimo.com", "/login")
-    assert result["score"] == 0
-    assert result["classification"] == "segura"
-    assert result["reasons"] == []
+def analisar(url, listas=VAZIAS):
+    return calculate_risk(url, listas)
 
-def test_scorer_contract_format():
-    result = calculate_risk("http://192.168.0.1/login", "192.168.0.1", "/login")
-    assert set(result.keys()) == {"score", "classification", "reasons"}
-    assert isinstance(result["score"], int)
-    assert isinstance(result["classification"], str)
-    assert isinstance(result["reasons"], list)
+
+# --- RN-02: faixas de classificação ---
+
+@pytest.mark.parametrize(
+    "score, esperado",
+    [(0, "segura"), (29, "segura"), (30, "suspeita"), (59, "suspeita"), (60, "perigosa"), (100, "perigosa")],
+)
+def test_rn02_faixas_de_classificacao(score, esperado):
+    assert classify(score) == esperado
+
+
+# --- RN-03 / RN-04: precedência das listas locais ---
+
+def test_rn03_allowlist_zera_o_score():
+    # A URL tem sinais de risco (http + palavra-chave), mas a allowlist tem prioridade absoluta.
+    resultado = calculate_risk("http://site-legitimo.com/login", LISTAS)
+    assert resultado.score == 0
+    assert resultado.classification == "segura"
+    assert resultado.reasons == ["dominio_allowlist"]
+
+
+def test_rn04_blocklist_forca_perigosa():
+    resultado = calculate_risk("https://malware.test/home", LISTAS)
+    assert resultado.score == 100
+    assert resultado.classification == "perigosa"
+    assert resultado.reasons == ["dominio_blocklist"]
+
+
+def test_n07_www_ignorado_na_consulta_mas_preservado_na_resposta():
+    # A consulta remove o `www.`, mas `normalized_host` mantém o host de entrada.
+    resultado = calculate_risk("http://www.site-legitimo.com/login", LISTAS)
+    assert resultado.reasons == ["dominio_allowlist"]
+    assert resultado.normalized_host == "www.site-legitimo.com"
+
+
+def test_rf15_subdominio_de_item_da_allowlist_nao_e_liberado():
+    # RF-15 exige correspondência exata: o subdomínio segue para a análise heurística.
+    resultado = calculate_risk("http://login.site-legitimo.com/verify", LISTAS)
+    assert resultado.reasons == ["sem_https", "palavra_chave_sensivel_no_path_query"]
+
+
+def test_rn03_allowlist_avaliada_antes_da_blocklist():
+    # Interseção por erro de configuração: RN-03 prevalece (nota do SDD §4).
+    ambas = DomainLists(allowlist=frozenset({"exemplo.com"}), blocklist=frozenset({"exemplo.com"}))
+    assert calculate_risk("https://exemplo.com/home", ambas).reasons == ["dominio_allowlist"]
+
+
+# --- Agregação de heurísticas (SDD Tabela 4.1) ---
+
+def test_url_sem_sinais_e_segura():
+    resultado = analisar("https://site-neutro.com/home")
+    assert resultado.score == 0
+    assert resultado.classification == "segura"
+    assert resultado.reasons == []
+
+
+def test_http_isolado_soma_dez():
+    resultado = analisar("https://site-neutro.com/home")
+    assert resultado.score == 0
+    resultado = analisar("http://site-neutro.com/home")
+    assert resultado.score == 10
+    assert resultado.reasons == ["sem_https"]
+
+
+def test_host_ip_com_http_e_palavra_chave():
+    # host_ip 25 + sem_https 10 + palavra-chave 20 = 55
+    resultado = analisar("http://192.168.0.1/login")
+    assert resultado.score == 55
+    assert resultado.classification == "suspeita"
+
+
+def test_multiplas_heuristicas_elevam_para_perigosa():
+    # host_ip 25 + arroba 25 + sem_https 10 + palavra-chave 20 = 80
+    resultado = analisar("http://user@192.168.0.1/login")
+    assert resultado.score == 80
+    assert resultado.classification == "perigosa"
+
+
+# --- RN-06: palavra-chave sensível exige outro sinal ---
+
+def test_rn06_palavra_chave_isolada_nao_pontua():
+    resultado = analisar("https://site-neutro.com/login")
+    assert resultado.score == 0
+    assert resultado.classification == "segura"
+    assert resultado.reasons == []
+
+
+def test_rn06_palavra_chave_pontua_com_outro_sinal():
+    resultado = analisar("http://site-neutro.com/login")
+    assert resultado.reasons == ["sem_https", "palavra_chave_sensivel_no_path_query"]
+    assert resultado.score == 30  # sem_https 10 + palavra-chave 20
+
+
+def test_rn06_palavra_chave_nao_pontua_sob_allowlist():
+    assert calculate_risk("https://site-legitimo.com/login", LISTAS).reasons == ["dominio_allowlist"]
+
+
+# --- RN-07 / ordem normativa dos motivos (SDD §4.1) ---
+
+def test_ordem_normativa_dos_motivos():
+    resultado = analisar("http://user@192.168.0.1/login")
+    assert resultado.reasons == [
+        "host_ip",
+        "uso_arroba_userinfo",
+        "sem_https",
+        "palavra_chave_sensivel_no_path_query",
+    ]
+
+
+def test_exemplo_normativo_do_sdd():
+    # SDD §5.2: tld .top 15 + impersonação paypal 25 + http 10 + palavra "login" 20 = 70.
+    # O host tem apenas 1 nível de subdomínio, logo RF-07 não pontua.
+    resultado = analisar("http://paypa1-secure.verify-account.top/login")
+    assert resultado.score == 70
+    assert resultado.classification == "perigosa"
+    assert resultado.normalized_host == "paypa1-secure.verify-account.top"
+    assert resultado.reasons == [
+        "tld_suspeito",
+        "possivel_impersonacao_marca:paypal",
+        "sem_https",
+        "palavra_chave_sensivel_no_path_query",
+    ]
+
+
+def test_tld_suspeito_ocupa_posicao_normativa():
+    # Ordem do SDD §4.1: subdomínios → TLD → encurtador.
+    resultado = analisar("https://a.b.c.d.exemplo.top/home")
+    assert resultado.reasons == ["subdominios_excessivos", "tld_suspeito"]
+    assert resultado.score == 30
+
+
+def test_rn07_sem_motivos_duplicados():
+    resultado = analisar("http://user@teste@192.168.0.1/login-verify-secure-account")
+    assert len(resultado.reasons) == len(set(resultado.reasons))
+
+
+# --- RN-01: clamp do score ---
+
+def test_rn01_score_limitado_a_cem():
+    # Soma bruta = 25+15+15+25+25+10+10+20 = 145.
+    url = "http://user@a.b.c.d.xn--paypal-fake.top/login-verify-secure-account-confirm-senha-banco"
+    resultado = analisar(url)
+    assert resultado.score == 100
+    assert resultado.classification == "perigosa"
+
+
+# --- RF-17 / RN-09: entrada inválida não recebe classificação ---
+
+@pytest.mark.parametrize(
+    "entrada",
+    ["", "   ", "ftp://exemplo.com", "javascript:alert(1)", "http://", None, 42,
+     "www.exemplo.com", "exemplo.com/login"],
+)
+def test_rf17_entrada_invalida_levanta_erro(entrada):
+    with pytest.raises(InvalidURLError):
+        analisar(entrada)
+
+
+# --- RNF-02: determinismo ---
+
+def test_rnf02_resultado_deterministico():
+    url = "http://user@a.b.c.d.paypal-fake.top/login"
+    resultados = {repr(analisar(url)) for _ in range(50)}
+    assert len(resultados) == 1
+
+
+def test_url_da_resposta_e_a_entrada_apos_trim():
+    # SDD §5.2: o campo `url` é a entrada original após remoção de espaços externos.
+    assert analisar("  https://site-neutro.com/home  ").url == "https://site-neutro.com/home"
