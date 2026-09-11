@@ -23,6 +23,7 @@ from analyzer.rules import (
     missing_https,
     punycode_homograph,
     suspicious_keywords,
+    suspicious_tld,
     url_length,
     url_shortener,
 )
@@ -39,8 +40,7 @@ STRUCTURAL_HEURISTICS = (
     ip_domain,
     at_symbol,
     excessive_subdomains,
-    # RF-08 (TLD suspeito) entra aqui, entre subdomínios e encurtador, quando
-    # `analyzer/rules/suspicious_tld.py` existir. `config.POINTS["tld_suspeito"]` já está definido.
+    suspicious_tld,
     url_shortener,
     brand_impersonation,
     punycode_homograph,
