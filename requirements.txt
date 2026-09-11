@@ -8,3 +8,4 @@ pydantic>=2.7
 
 # Test Harness
 pytest>=8.0
+httpx2
