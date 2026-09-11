@@ -118,6 +118,28 @@ def test_ordem_normativa_dos_motivos():
     ]
 
 
+def test_exemplo_normativo_do_sdd():
+    # SDD §5.2: tld .top 15 + impersonação paypal 25 + http 10 + palavra "login" 20 = 70.
+    # O host tem apenas 1 nível de subdomínio, logo RF-07 não pontua.
+    resultado = analisar("http://paypa1-secure.verify-account.top/login")
+    assert resultado.score == 70
+    assert resultado.classification == "perigosa"
+    assert resultado.normalized_host == "paypa1-secure.verify-account.top"
+    assert resultado.reasons == [
+        "tld_suspeito",
+        "possivel_impersonacao_marca:paypal",
+        "sem_https",
+        "palavra_chave_sensivel_no_path_query",
+    ]
+
+
+def test_tld_suspeito_ocupa_posicao_normativa():
+    # Ordem do SDD §4.1: subdomínios → TLD → encurtador.
+    resultado = analisar("https://a.b.c.d.exemplo.top/home")
+    assert resultado.reasons == ["subdominios_excessivos", "tld_suspeito"]
+    assert resultado.score == 30
+
+
 def test_rn07_sem_motivos_duplicados():
     resultado = analisar("http://user@teste@192.168.0.1/login-verify-secure-account")
     assert len(resultado.reasons) == len(set(resultado.reasons))
@@ -126,7 +148,7 @@ def test_rn07_sem_motivos_duplicados():
 # --- RN-01: clamp do score ---
 
 def test_rn01_score_limitado_a_cem():
-    # Soma bruta = 25+15+25+25+10+10+20 = 130.
+    # Soma bruta = 25+15+15+25+25+10+10+20 = 145.
     url = "http://user@a.b.c.d.xn--paypal-fake.top/login-verify-secure-account-confirm-senha-banco"
     resultado = analisar(url)
     assert resultado.score == 100
