@@ -170,7 +170,11 @@ def test_rn01_score_limitado_a_cem():
 
 # --- RF-17 / RN-09: entrada inválida não recebe classificação ---
 
-@pytest.mark.parametrize("entrada", ["", "   ", "ftp://exemplo.com", "javascript:alert(1)", "http://", None, 42])
+@pytest.mark.parametrize(
+    "entrada",
+    ["", "   ", "ftp://exemplo.com", "javascript:alert(1)", "http://", None, 42,
+     "www.exemplo.com", "exemplo.com/login"],
+)
 def test_rf17_entrada_invalida_levanta_erro(entrada):
     with pytest.raises(InvalidURLError):
         analisar(entrada)
