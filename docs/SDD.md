@@ -105,19 +105,21 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 
 ## 4.2. Listas fechadas e critérios operacionais
 
-**TLDs suspeitos**: `.zip`, `.top`, `.xyz`, `.country`, `.click`, `.link`
-**Encurtadores conhecidos**: `bit.ly`, `tinyurl.com`, `t.co`, `is.gd`
+**TLDs suspeitos**: `.zip`, `.top`, `.xyz`, `.country`, `.click`, `.link`, `.work`, `.gq`, `.tk`, `.ml`, `.cf`, `.mom`, `.fit`
+**Encurtadores conhecidos**: `bit.ly`, `tinyurl.com`, `t.co`, `is.gd`, `goo.gl`, `ow.ly`, `buff.ly`, `cutt.ly`, `rebrand.ly`
 **Palavras-chave sensíveis**: `login`, `verify`, `secure`, `update`, `confirm`, `account`, `senha`, `banco`, `wp-login`
 
 | Marca monitorada | Domínio oficial |
 | ---------------- | --------------- |
 | paypal | paypal.com |
 | google | google.com |
-| microsoft | microsoft.com |
+| microsoft | microsoft.com, live.com, office.com |
+| apple | apple.com |
 | itau | itau.com.br |
 | caixa | caixa.gov.br |
 | bradesco | bradesco.com.br |
 | nubank | nubank.com.br |
+| amazon | amazon.com, amazon.com.br |
 
 **Critério de subdomínios nesta entrega**: para hosts que não são IP, o hostname é separado por pontos. Para manter a implementação local e determinística sem Public Suffix List, os dois últimos labels são tratados como domínio-base; a heurística dispara quando houver mais de três labels anteriores a esses dois. Portanto, a.b.c.d.example.com dispara (4 subdomínios) e a.b.c.example.com não dispara (3). Essa aproximação é conhecida e poderá ser substituída por uma Public Suffix List em evolução futura.
 
@@ -312,11 +314,19 @@ tests/
 > 
 ---
 
-## 8. Histórico de Versões
+## 8. Refinamento por Feedback
+
+**Data**: 2026-09-12
+**Descrição**: As listas fechadas da seção 4.2 (SUSPICIOUS_TLDS, URL_SHORTENERS, MONITORED_BRANDS) foram ampliadas para espelhar as configurações já existentes e validadas em `analyzer/config.py`. 
+**Justificativa**: A decisão do grupo (#58) definiu que reduzir o código descartaria configurações já validadas e poderia quebrar implementações futuras. Optou-se por ampliar o SDD para ser compatível com o código e inserir um teste de consistência automatizado para garantir que ambos permaneçam em sincronia (onde o SDD é ajustado ao config de forma documentada neste refinamento).
+
+---
+
+## 9. Histórico de Versões
 
 | Versão | Data | Alteração | Motivo | Autor |
 | --- | --- | --- | --- |
 | v1.0 | 2026-09-03 | Criação do documento | Especificação inicial para o Bootcamp | Ana Clara |
 | v1.1 | 2026-09-08 | Correção de numerações (RN), remoção de conflito de SLA (RNF) e ajustes nos contratos de erro da API (422). | Refinamento após revisão de arquitetura | Mariana |
+| v1.2 | 2026-09-12 | Ampliação das listas da seção 4.2 para parear com config.py. | Refinamento por Feedback (Issue #58) | Ana Clara |
 
-```
