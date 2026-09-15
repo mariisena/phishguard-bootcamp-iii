@@ -156,7 +156,7 @@ Content-Type: `application/json`
     "tld_suspeito",
     "possivel_impersonacao_marca:paypal",
     "sem_https",
-    "palavra_chave_sensivel_no_path"
+    "palavra_chave_sensivel_no_path_query"
   ],
   "checked_at": "2026-08-31T13:00:00Z"
 }
@@ -312,11 +312,20 @@ tests/
 > 
 ---
 
-## 8. Histórico de Versões
+## 8. Refinamento por Feedback
+
+**Data**: 2026-09-15
+**Descrição**: O exemplo de response JSON na seção 5.2 usava o código de motivo `"palavra_chave_sensivel_no_path"`, inconsistente com o código normativo `"palavra_chave_sensivel_no_path_query"` definido na Tabela 4.1.
+**Justificativa** (Issue #60): A Tabela 4.1 é a referência normativa do sistema e o código já usa essa convenção. Tratava-se de uma inconsistência apenas na documentação; nenhum arquivo de código ou teste foi alterado.
+
+---
+
+## 9. Histórico de Versões
 
 | Versão | Data | Alteração | Motivo | Autor |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | v1.0 | 2026-09-03 | Criação do documento | Especificação inicial para o Bootcamp | Ana Clara |
 | v1.1 | 2026-09-08 | Correção de numerações (RN), remoção de conflito de SLA (RNF) e ajustes nos contratos de erro da API (422). | Refinamento após revisão de arquitetura | Mariana |
-
-```
+| v1.2 | 2026-09-12 | Ampliação das listas fechadas da seção 4.2 para parear com o config.py. | Refinamento por Feedback (#58) | Ana Clara |
+| v1.2 | 2026-09-12 | Atualização da RN-05 para admitir normalização leet speak básica. | Refinamento por Feedback (#59) | Ana Clara |
+| v1.2 | 2026-09-15 | Correção da flag para palavra_chave_sensivel_no_path_query no §5.2. | Refinamento por Feedback (#60) | Ana Clara |
