@@ -78,7 +78,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 2. **RN-02 — Classificação por faixa:** Score de 0 a 29 resulta em segura; 30 a 59 em suspeita; 60 a 100 em perigosa. As faixas são constantes centralizadas e não devem ser repetidas de forma hardcoded.
 3.	**RN-03 — Allowlist tem prioridade absoluta:** Se o host canônico, sem prefixo www., corresponder exatamente a um item da allowlist, o resultado final deve ser score 0, classification segura e reasons = ["dominio_allowlist"]. A allowlist é avaliada antes da blocklist.
 4.	**RN-04 — Blocklist força classificação perigosa:** Se o host canônico, sem prefixo www., corresponder exatamente a um item da blocklist e não houver correspondência na allowlist, o resultado final deve ser score 100, classification perigosa e reasons = ["dominio_blocklist"].
-5.	**RN-05 — Impersonação de marca exige ausência de domínio oficial:** A heurística dispara quando o host contém, de forma case-insensitive, o nome de uma marca monitorada e o host não é o domínio oficial nem um subdomínio desse domínio oficial. A heurística representa impersonação por inclusão de marca; typosquatting por variação ortográfica permanece fora de escopo.
+5.	**RN-05 — Impersonação de marca exige ausência de domínio oficial:** A heurística dispara quando o host contém, de forma case-insensitive, o nome de uma marca monitorada e o host não é o domínio oficial nem um subdomínio desse domínio oficial. Antes da comparação, é aplicada uma normalização leet speak básica (0→o, 1→l, 3→e, 4→a, 5→s, 7→t). A heurística representa impersonação por inclusão de marca; typosquatting ortográfico genérico (troca de letras distintas, letras duplicadas, etc.) permanece fora de escopo, sendo coberta apenas essa substituição específica de caracteres leet.
 6.	**RN-06 — Palavra-chave sensível exige outro sinal:** A presença de palavra-chave sensível no path/query só adiciona pontos se ao menos uma heurística RF-05 a RF-13 também tiver disparado. Múltiplas palavras ou ocorrências não acumulam pontos adicionais.
 7.	**RN-07 — Uma heurística dispara no máximo uma vez:** Cada categoria de heurística soma pontos no máximo uma vez por análise, ainda que o padrão apareça repetidamente.
 8.	**RN-08 — Encurtadores são sinalizados, não bloqueados:** Host de encurtador conhecido adiciona pontuação e o motivo encurtador_conhecido_destino_nao_verificado. O serviço não segue o redirecionamento nesta entrega.
@@ -105,19 +105,21 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 
 ## 4.2. Listas fechadas e critérios operacionais
 
-**TLDs suspeitos**: `.zip`, `.top`, `.xyz`, `.country`, `.click`, `.link`
-**Encurtadores conhecidos**: `bit.ly`, `tinyurl.com`, `t.co`, `is.gd`
+**TLDs suspeitos**: `.zip`, `.top`, `.xyz`, `.country`, `.click`, `.link`, `.work`, `.gq`, `.tk`, `.ml`, `.cf`, `.mom`, `.fit`
+**Encurtadores conhecidos**: `bit.ly`, `tinyurl.com`, `t.co`, `is.gd`, `goo.gl`, `ow.ly`, `buff.ly`, `cutt.ly`, `rebrand.ly`
 **Palavras-chave sensíveis**: `login`, `verify`, `secure`, `update`, `confirm`, `account`, `senha`, `banco`, `wp-login`
 
 | Marca monitorada | Domínio oficial |
 | ---------------- | --------------- |
 | paypal | paypal.com |
 | google | google.com |
-| microsoft | microsoft.com |
+| microsoft | microsoft.com, live.com, office.com |
+| apple | apple.com |
 | itau | itau.com.br |
 | caixa | caixa.gov.br |
 | bradesco | bradesco.com.br |
 | nubank | nubank.com.br |
+| amazon | amazon.com, amazon.com.br |
 
 **Critério de subdomínios nesta entrega**: para hosts que não são IP, o hostname é separado por pontos. Para manter a implementação local e determinística sem Public Suffix List, os dois últimos labels são tratados como domínio-base; a heurística dispara quando houver mais de três labels anteriores a esses dois. Portanto, a.b.c.d.example.com dispara (4 subdomínios) e a.b.c.example.com não dispara (3). Essa aproximação é conhecida e poderá ser substituída por uma Public Suffix List em evolução futura.
 
@@ -317,6 +319,13 @@ tests/
 **Data**: 2026-09-15
 **Descrição**: O exemplo de response JSON na seção 5.2 usava o código de motivo `"palavra_chave_sensivel_no_path"`, inconsistente com o código normativo `"palavra_chave_sensivel_no_path_query"` definido na Tabela 4.1.
 **Justificativa** (Issue #60): A Tabela 4.1 é a referência normativa do sistema e o código já usa essa convenção. Tratava-se de uma inconsistência apenas na documentação; nenhum arquivo de código ou teste foi alterado.
+**Data**: 2026-09-12
+**Descrição**: A regra RN-05 foi atualizada para formalizar a aplicação de normalização leet speak básica (0→o, 1→l, 3→e, 4→a, 5→s, 7→t) antes da verificação de impersonação de marcas.
+**Justificativa**: A decisão do grupo (#59) confirmou que o teste normativo `test_exemplo_normativo_do_sdd` em `tests/test_scorer.py` já depende desse comportamento para atingir o score esperado no host `paypa1-secure.verify-account.top`. Alterar o código invalidaria a suíte de testes existente, então a documentação foi adaptada para espelhar a implementação.
+
+**Data**: 2026-09-12
+**Descrição**: As listas fechadas da seção 4.2 (SUSPICIOUS_TLDS, URL_SHORTENERS, MONITORED_BRANDS) foram ampliadas para espelhar as configurações já existentes e validadas em `analyzer/config.py`. 
+**Justificativa**: A decisão do grupo (#58) definiu que reduzir o código descartaria configurações já validadas e poderia quebrar implementações futuras. Optou-se por ampliar o SDD para ser compatível com o código e inserir um teste de consistência automatizado para garantir que ambos permaneçam em sincronia (onde o SDD é ajustado ao config de forma documentada neste refinamento).
 
 ---
 
@@ -329,3 +338,4 @@ tests/
 | v1.2 | 2026-09-12 | Ampliação das listas fechadas da seção 4.2 para parear com o config.py. | Refinamento por Feedback (#58) | Ana Clara |
 | v1.2 | 2026-09-12 | Atualização da RN-05 para admitir normalização leet speak básica. | Refinamento por Feedback (#59) | Ana Clara |
 | v1.2 | 2026-09-15 | Correção da flag para palavra_chave_sensivel_no_path_query no §5.2. | Refinamento por Feedback (#60) | Ana Clara |
+
