@@ -334,4 +334,5 @@ tests/
 | v1.1 | 2026-09-08 | Correção de numerações (RN), remoção de conflito de SLA (RNF) e ajustes nos contratos de erro da API (422). | Refinamento após revisão de arquitetura | Mariana |
 | v1.2 | 2026-09-12 | Ampliação das listas fechadas da seção 4.2 para parear com o config.py. | Refinamento por Feedback (#58) | Ana Clara |
 | v1.2 | 2026-09-12 | Atualização da RN-05 para admitir normalização leet speak básica. | Refinamento por Feedback (#59) | Ana Clara |
-
+| v1.2 | 2026-09-17 | Correção da flag para palavra_chave_sensivel_no_path_query no §5.2. | Refinamento por Feedback (#60) | Ana Clara |
+| v1.2 | 2026-09-22 | Definição de escopo e conteúdo inicial das listas de allowlist e blocklist. | Refinamento por Feedback (#61) | Ana Clara |
