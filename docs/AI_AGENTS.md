@@ -163,13 +163,15 @@ isoladas e testáveis.
 A estrutura principal prevista pelo projeto inclui:
 
 ```text
-src/phishguard/
+analyzer/
+├── __init__.py
 ├── api.py
+├── config.py
 ├── models.py
 ├── url_normalizer.py
 ├── scorer.py
 ├── blocklist.py
-└── heuristics/
+└── rules/
 ```
 
 As responsabilidades de cada componente devem seguir `docs/SDD.md`.
@@ -407,7 +409,7 @@ ou que não possuam critérios objetivos para teste.
 
 ```text
 Implemente a heurística RF-08 de detecção de TLD suspeito em
-src/phishguard/heuristics/suspicious_tld.py, respeitando o contrato
+analyzer/rules/suspicious_tld.py, respeitando o contrato
 de HeuristicResult e os critérios definidos no SDD.
 ```
 
