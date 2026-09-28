@@ -1,4 +1,4 @@
-"""Contratos de request/response da API (ver docs/SPECIFICATION.md §5)."""
+"""Contratos de request/response da API (ver docs/SDD.md §5)."""
 
 from datetime import datetime
 from typing import List

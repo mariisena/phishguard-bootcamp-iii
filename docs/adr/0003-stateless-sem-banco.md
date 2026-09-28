@@ -169,7 +169,7 @@ O carregamento único durante a inicialização mantém a análise mais simples 
 A lógica responsável pelas listas deverá permanecer isolada no componente:
 
 ```text
-src/phishguard/blocklist.py
+analyzer/blocklist.py
 ```
 
 Esse componente será responsável por:
