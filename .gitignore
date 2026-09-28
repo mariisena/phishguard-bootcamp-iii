@@ -26,3 +26,6 @@ Thumbs.db
 # Variaveis de ambiente
 .env
 .env.local
+
+# Logs do harness (RNF-06 - gerados localmente a cada execucao)
+logs/
