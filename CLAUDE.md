@@ -79,15 +79,17 @@ models.py
 url_normalizer.py
 scorer.py
 blocklist.py
-heuristics/*.py
+rules/*.py
 ```
+
+Todos esses módulos ficam no pacote `analyzer/`.
 
 Cada heurística deve possuir responsabilidade única.
 
 Uma nova heurística deve ser implementada em um novo arquivo dentro de:
 
 ```text
-src/phishguard/heuristics/
+analyzer/rules/
 ```
 
 Não implemente regras específicas de heurística diretamente em `scorer.py`.
@@ -249,7 +251,7 @@ Não altere regras de normalização sem atualizar previamente o SDD.
 Constantes relacionadas às regras de negócio devem permanecer centralizadas em:
 
 ```text
-src/phishguard/config.py
+analyzer/config.py
 ```
 
 Exemplos:
@@ -473,7 +475,7 @@ scorer.py
      │
      ├── url_normalizer.py
      │
-     ├── heuristics/*.py
+     ├── rules/*.py
      │
      └── blocklist.py
      │
@@ -505,7 +507,7 @@ Responsável pelos modelos Pydantic dos contratos de entrada e saída.
 
 Responsável por parsing, normalização e validação da URL.
 
-### `heuristics/*.py`
+### `rules/*.py`
 
 Cada arquivo implementa uma única heurística de risco.
 
@@ -581,7 +583,6 @@ Todo Pull Request deve:
 Consulte também:
 
 ```text
-GITHUB_SETUP.md
 .github/PULL_REQUEST_TEMPLATE.md
 ```
 
@@ -636,7 +637,7 @@ pip install -r requirements.txt
 Subir a API:
 
 ```bash
-uvicorn phishguard.api:app --reload
+uvicorn analyzer.api:app --reload
 ```
 
 Executar o Test Harness:
@@ -653,7 +654,7 @@ Executar o Test Harness:
 
 ```text
 Implemente a heurística RF-08 (TLD suspeito) em
-src/phishguard/heuristics/suspicious_tld.py seguindo o contrato de
+analyzer/rules/suspicious_tld.py seguindo o contrato de
 HeuristicResult e adicione os testes correspondentes.
 ```
 
