@@ -13,8 +13,6 @@ Proibições explícitas (SDD §5.1):
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -87,16 +85,13 @@ async def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
     """
     result = calculate_risk(body.url)
 
-    # ``AnalysisResult`` (dataclass do scorer) não carrega ``checked_at``.
-    # A camada HTTP é o único lugar onde o timestamp de resposta faz sentido:
-    # é aqui que a requisição foi atendida.
+    # SDD §5.2 / RNF-02: a resposta não carrega timestamp nem outro campo variável.
     return AnalyzeResponse(
         url=result.url,
         normalized_host=result.normalized_host,
         score=result.score,
         classification=result.classification,
         reasons=result.reasons,
-        checked_at=datetime.now(tz=timezone.utc),
     )
 
 
