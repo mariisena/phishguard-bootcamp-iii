@@ -60,6 +60,29 @@ Contém o contexto operacional utilizado pelo agente, incluindo:
 
 Esse arquivo também serve como referência para os membros da equipe.
 
+### `.claude/rules/`
+
+Regras complementares ao `CLAUDE.md`, separadas por tema. Elas não repetem o `CLAUDE.md`: citam a
+seção correspondente e acrescentam apenas o que é específico, em geral pontos que já causaram erro
+no projeto.
+
+| Arquivo | Quando é carregado | Conteúdo |
+| --- | --- | --- |
+| `.claude/rules/seguranca.md` | Sempre, no início da sessão (sem `paths`) | Git (nada na `main`, confirmação para `--force`/`reset --hard`), processos só por PID, segredos e dados pessoais, rede e dependências, decisões de produto |
+| `.claude/rules/codigo.md` | Quando o agente lê ou edita `analyzer/**/*.py` | Pacote `analyzer` (não `phishguard`), contrato das heurísticas, códigos de motivo da Tabela 4.1, constantes em `config.py`, proibição de `except Exception: pass` |
+| `.claude/rules/testes.md` | Quando o agente lê ou edita `tests/**/*.py`, `pytest.ini` ou `scripts/run_harness.sh` | Caso positivo, negativo e de borda; valores esperados literais derivados do SDD; determinismo; dados sintéticos |
+
+O carregamento condicional usa o campo `paths` do frontmatter YAML, conforme a documentação do
+Claude Code ("Organize rules with `.claude/rules/`"). Para conferir quais regras estão no contexto
+de uma sessão, use o comando `/context`.
+
+Verificação feita em 2026-10-12 com duas sessões `claude -p` (issue #93): numa sessão nova, só
+`seguranca.md` estava no contexto; depois de o agente ler `analyzer/rules/base.py` e
+`tests/test_suspicious_tld.py`, `codigo.md` e `testes.md` também passaram a constar.
+
+Essas regras são contexto, não bloqueio técnico. As proteções que não podem depender do agente
+(push na `main`, aprovação obrigatória) ficam na proteção de branch do GitHub.
+
 ### `docs/SDD.md`
 
 A especificação técnica está localizada em:
