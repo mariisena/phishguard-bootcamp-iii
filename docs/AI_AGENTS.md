@@ -307,7 +307,6 @@ Todo Pull Request deve seguir as regras definidas em:
 
 ```text
 CLAUDE.md
-GITHUB_SETUP.md
 .github/PULL_REQUEST_TEMPLATE.md
 ```
 
