@@ -10,8 +10,8 @@ Por isso, *todos* os testes mockam ``analyzer.api.calculate_risk`` via
 Cenários cobertos (SDD §5.2 – §5.3)
 -------------------------------------
     ✓ POST /api/v1/analyze – 200 com payload válido
-    ✓ POST /api/v1/analyze – resposta contém todos os campos de AnalyzeResponse
-    ✓ POST /api/v1/analyze – ``checked_at`` é injetado pela camada HTTP (não vem do engine)
+    ✓ POST /api/v1/analyze – resposta contém exatamente os campos do contrato (sem ``checked_at``)
+    ✓ POST /api/v1/analyze – mesma requisição devolve corpo idêntico (RNF-02)
     ✓ POST /api/v1/analyze – URL é repassada ao engine sem modificação
     ✓ POST /api/v1/analyze – 422 body ausente
     ✓ POST /api/v1/analyze – 422 objeto JSON vazio (campo ``url`` ausente)
@@ -26,7 +26,6 @@ Cenários cobertos (SDD §5.2 – §5.3)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -114,11 +113,11 @@ class TestAnalyzeSuccess:
         assert _post("https://example.com").status_code == 200
 
     @patch("analyzer.api.calculate_risk")
-    def test_response_has_all_fields(self, mock_cr):
+    def test_response_has_exactly_contract_fields(self, mock_cr):
+        """SDD §5.2: a resposta tem exatamente estes campos; ``checked_at`` foi removido (RNF-02)."""
         mock_cr.return_value = _make_result()
         body = _post("https://example.com").json()
-        for field in ("url", "normalized_host", "score", "classification", "reasons", "checked_at"):
-            assert field in body, f"Campo ausente: {field}"
+        assert set(body) == {"url", "normalized_host", "score", "classification", "reasons"}
 
     @patch("analyzer.api.calculate_risk")
     def test_url_field_matches_engine_output(self, mock_cr):
@@ -152,15 +151,10 @@ class TestAnalyzeSuccess:
         assert body["reasons"] == ["host_ip", "sem_https"]
 
     @patch("analyzer.api.calculate_risk")
-    def test_checked_at_is_injected_by_api_layer(self, mock_cr):
-        """``checked_at`` não existe em ``AnalysisResult``; a API deve criá-lo."""
-        mock_cr.return_value = _make_result()
-        before = datetime.now(tz=timezone.utc)
-        body = _post("https://example.com").json()
-        after = datetime.now(tz=timezone.utc)
-
-        checked_at = datetime.fromisoformat(body["checked_at"])
-        assert before <= checked_at <= after
+    def test_same_request_returns_identical_body(self, mock_cr):
+        """RNF-02: a camada HTTP não adiciona campos variáveis (ex.: timestamp) à resposta."""
+        mock_cr.return_value = _make_result(reasons=["host_ip", "sem_https"])
+        assert _post("https://example.com").json() == _post("https://example.com").json()
 
     @patch("analyzer.api.calculate_risk")
     def test_url_is_passed_verbatim_to_engine(self, mock_cr):
