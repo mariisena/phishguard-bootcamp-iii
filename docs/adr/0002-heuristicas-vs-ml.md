@@ -126,6 +126,10 @@ Caso seja adotado futuramente, deverá ser documentado por uma nova ADR ou pela 
 
 * O motor heurístico não aprende automaticamente com novos exemplos de ataques.
 
+Os trade-offs de duas heurísticas específicas estão detalhados na
+[ADR-0006](0006-subdominios-sem-public-suffix-list.md) (subdomínios sem Public Suffix List) e na
+[ADR-0007](0007-marca-por-inclusao-e-leet-speak.md) (impersonação de marca por inclusão).
+
 ## Evolução da decisão
 
 As heurísticas poderão evoluir conforme novos requisitos e feedback forem incorporados ao projeto.

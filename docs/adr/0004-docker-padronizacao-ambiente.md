@@ -243,6 +243,9 @@ O ambiente inicial permanece composto essencialmente pela aplicação e pela con
 
 Isso reduz a quantidade de componentes do `docker-compose.yml` e facilita a reprodução do ambiente.
 
+O mesmo comando roda no CI a cada push e Pull Request, no job `docker-harness`
+(ver [ADR-0009](0009-ci-github-actions.md)).
+
 ## Evolução da decisão
 
 Esta decisão deverá ser revisada caso o projeto passe a exigir:

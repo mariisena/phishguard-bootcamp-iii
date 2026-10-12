@@ -205,16 +205,58 @@ As decisões técnicas estruturais do projeto estão documentadas na pasta [`doc
 
 ---
 
-### ADR-0005 — Uso de agente de IA (Claude Code / Antigravity) no desenvolvimento
+### ADR-0005 — Claude Code como agente de IA no fluxo SDD
 
 **Status:** Aceita
 
-**Decisão:** Adotar agente de IA como ferramenta auxiliar no fluxo de desenvolvimento, operando estritamente dentro das diretrizes do `CLAUDE.md` e do SDD.
+**Decisão:** Adotar o Claude Code como agente de IA principal, operando dentro das diretrizes do `CLAUDE.md`, das regras em `.claude/rules/` e do SDD.
 
 **Por quê:**
 - O agente acelera a geração de código estruturado (heurísticas, testes, documentação) respeitando os contratos definidos na especificação.
 - A adoção é condicionada ao fluxo **Especificar → Testar → Implementar → Validar**: o agente não deve alterar pesos, contratos ou regras de negócio sem aprovação humana explícita.
 - Qualquer divergência identificada entre código, testes e SDD deve ser reportada ao time antes de ser resolvida.
+
+---
+
+### ADR-0006 — Contagem de subdomínios sem Public Suffix List
+
+**Status:** Aceita
+
+**Decisão:** Tratar os dois últimos labels do host como domínio-base; a RF-07 dispara com mais de três subdomínios.
+
+**Trade-off:** regra local e determinística, ao custo de falso positivo em sufixos de dois níveis (`a.b.c.banco.com.br` dispara com 3 subdomínios reais).
+
+---
+
+### ADR-0007 — Impersonação de marca por inclusão + leet speak
+
+**Status:** Aceita
+
+**Decisão:** Disparar quando o nome da marca, após normalização leet (`0→o`, `1→l`, `3→e`, `4→a`, `5→s`, `7→t`), estiver contido no host e o host não for o domínio oficial.
+
+**Trade-off:** pega `paypa1-secure` e `paypalsecure`, mas gera falsos positivos por coincidência de letras (`capitaurbana.com` → `itau`, issue #91).
+
+---
+
+### ADR-0008 — Contrato determinístico, sem `checked_at`
+
+**Status:** Aceita
+
+**Decisão:** A resposta contém só `url`, `normalized_host`, `score`, `classification` e `reasons`; nenhum campo gerado no momento da requisição.
+
+**Trade-off:** garante o RNF-02 na resposta inteira, mas a API não informa quando a análise foi feita.
+
+---
+
+### ADR-0009 — CI com GitHub Actions
+
+**Status:** Aceita
+
+**Decisão:** Rodar em todo push e PR dois jobs: `pytest` com relatório publicado como artefato, e `docker compose run --rm test`.
+
+**Trade-off:** a suíte roda num ambiente limpo a cada mudança, mas sem proteção de branch (#94) o CI informa e não bloqueia o merge.
+
+O índice completo, com o principal trade-off de cada decisão, está em [`docs/adr/README.md`](docs/adr/README.md).
 
 ---
 
@@ -234,7 +276,7 @@ phishguard-bootcamp-iii/
 │   └── blocklist.json
 ├── docs/
 │   ├── SDD.md              # Especificação técnica (fonte da verdade)
-│   └── adr/                # Decisões arquiteturais (ADR-0001 a ADR-0005)
+│   └── adr/                # Decisões arquiteturais (ADR-0001 a ADR-0009)
 ├── tests/                  # Suíte de testes (pytest)
 ├── docker-compose.yml
 ├── Dockerfile
