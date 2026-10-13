@@ -1,3 +1,6 @@
+> **Registro bruto** (saída do agente na revisão de 10–11/09, mantida sem edição como fonte original).
+> A versão organizada, com detecção, impacto, evidência e origem de cada erro, está em [`erros_logicos.md`](erros_logicos.md).
+
 analyzer/scorer.py — reescrito. Correções sobre os achados da revisão:
 
 | Achado	| Correção |
