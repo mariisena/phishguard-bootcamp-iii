@@ -26,6 +26,20 @@ def test_marca_fora_do_dominio_oficial_dispara():
 @pytest.mark.parametrize(
     "host, marca",
     [
+        ("capitaurbana.com", "itau"),
+        ("caixadesom.com", "caixa"),
+    ],
+)
+def test_limitacao_conhecida_marca_contida_em_palavra_dispara(host, marca):
+    # Fixa uma limitação conhecida; mudar este comportamento exige decisão consciente.
+    resultado = check(f"https://{host}/")
+    assert resultado.triggered is True
+    assert resultado.reason == f"possivel_impersonacao_marca:{marca}"
+
+
+@pytest.mark.parametrize(
+    "host, marca",
+    [
         ("paypa1-secure.verify-account.top", "paypal"),  # exemplo normativo do §5.2
         ("g00gle-login.com", "google"),
         ("4mazon-ofertas.com", "amazon"),
