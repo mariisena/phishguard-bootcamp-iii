@@ -18,27 +18,27 @@ Ataques de phishing frequentemente utilizam URLs com padrões reconhecíveis: en
 
 Para cada URL analisada, a resposta contém:
 
-| Campo | Descrição |
-|---|---|
-| `score` | Pontuação de risco de 0 a 100 |
-| `classification` | `segura` (0–29), `suspeita` (30–59) ou `perigosa` (60–100) |
-| `reasons` | Lista ordenada e determinística dos sinais de risco identificados |
-| `normalized_host` | Host canônico em minúsculas, sem porta e em formato IDNA ASCII |
+| Campo             | Descrição                                                         |
+| ----------------- | ----------------------------------------------------------------- |
+| `score`           | Pontuação de risco de 0 a 100                                     |
+| `classification`  | `segura` (0–29), `suspeita` (30–59) ou `perigosa` (60–100)        |
+| `reasons`         | Lista ordenada e determinística dos sinais de risco identificados |
+| `normalized_host` | Host canônico em minúsculas, sem porta e em formato IDNA ASCII    |
 
 ### Heurísticas implementadas
 
-| Heurística | Sinal detectado | Pontos |
-|---|---|:---:|
-| IP como host | Host é um endereço IPv4 ou IPv6 | 25 |
-| Uso de `@` | Caractere `@` na seção de autoridade da URL | 25 |
-| Excesso de subdomínios | Mais de 3 subdomínios além do domínio base | 15 |
-| TLD suspeito | TLD pertencente à lista fechada definida na spec | 15 |
-| Encurtador conhecido | Host pertence à lista de encurtadores monitorados | 15 |
-| Impersonação de marca | Host contém nome de marca monitorada fora do domínio oficial | 25 |
-| Punycode / Unicode | Host em punycode (`xn--`) ou com caracteres não ASCII | 25 |
-| Ausência de HTTPS | Esquema da URL é `http` | 10 |
-| URL muito longa | URL com mais de 75 caracteres | 10 |
-| Palavra-chave sensível | Palavra sensível no path/query **e** ao menos outro sinal ativo | 20 |
+| Heurística             | Sinal detectado                                                 | Pontos |
+| ---------------------- | --------------------------------------------------------------- | :----: |
+| IP como host           | Host é um endereço IPv4 ou IPv6                                 |   25   |
+| Uso de `@`             | Caractere `@` na seção de autoridade da URL                     |   25   |
+| Excesso de subdomínios | Mais de 3 subdomínios além do domínio base                      |   15   |
+| TLD suspeito           | TLD pertencente à lista fechada definida na spec                |   15   |
+| Encurtador conhecido   | Host pertence à lista de encurtadores monitorados               |   15   |
+| Impersonação de marca  | Host contém nome de marca monitorada fora do domínio oficial    |   25   |
+| Punycode / Unicode     | Host em punycode (`xn--`) ou com caracteres não ASCII           |   25   |
+| Ausência de HTTPS      | Esquema da URL é `http`                                         |   10   |
+| URL muito longa        | URL com mais de 75 caracteres                                   |   10   |
+| Palavra-chave sensível | Palavra sensível no path/query **e** ao menos outro sinal ativo |   20   |
 
 ### Fora de escopo (nesta versão)
 
@@ -291,3 +291,4 @@ phishguard-bootcamp-iii/
 - **Especificação técnica:** [`docs/SDD.md`](docs/SDD.md)
 - **Decisões arquiteturais:** [`docs/adr/`](docs/adr/)
 - **Diretrizes para agentes de IA:** [`CLAUDE.md`](CLAUDE.md)
+- **Inspeção e correção de erros lógicos:** [`docs/registro_correcoes/erros_logicos.md`](docs/registro_correcoes/erros_logicos.md)
