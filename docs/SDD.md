@@ -295,23 +295,38 @@ URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL
 
 tests/
 ├── unit/
-│   ├── test_url_normalizer.py
-│   ├── test_heuristics_*.py
+│   ├── test_at_symbol.py
+│   ├── test_blocklist.py
+│   ├── test_brand_impersonation.py
+│   ├── test_config_consistency.py
+│   ├── test_excessive_subdomains.py
+│   ├── test_ip_domain.py
+│   ├── test_missing_https.py
+│   ├── test_punycode_homograph.py
 │   ├── test_scorer.py
-│   └── test_config_consistency.py
+│   ├── test_suspicious_keywords.py
+│   ├── test_suspicious_tld.py
+│   ├── test_url_length.py
+│   ├── test_url_normalizer.py
+│   └── test_url_shortener.py
 ├── integration/
-│   ├── test_analyze_api.py
-│   └── test_health_api.py
-└── evidence/
-    └── test-report.xml / test-report.txt
+│   ├── test_api.py
+│   ├── test_detector.py
+│   └── test_performance.py
 
 ```
+
+O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não há diretório `tests/evidence/`.
 
 > Os testes de desempenho devem usar tolerância adequada ao ambiente e não substituir os testes funcionais. O requisito RNF-01 pode ser validado por benchmark dedicado ou medição agregada, evitando flutuações excessivas em um único teste de CI.
 > 
 ---
 
 ## 8. Refinamento por Feedback
+
+**Data**: 2026-10-13
+**Descrição**: Reorganização dos testes em `tests/unit/` e `tests/integration/`, mantendo as evidências geradas pelo harness em `logs/`.
+**Justificativa**: Alinhar a estrutura do repositório ao §7.1 do SDD após a divergência deixada pela issue #66, encerrada como concluída sem a reorganização correspondente.
 
 **Data**: 2026-10-11
 **Descrição**: Revisão de consistência pós-Entrega 1, sem alteração de regra de negócio, peso, limiar ou lista: (a) RF-01 passa a citar o endpoint correto `POST /api/v1/analyze`; (b) o campo `checked_at` foi retirado do exemplo de response do §5.2, alinhando o exemplo à nota do próprio §5.2 que já o removera do contrato por causa do RNF-02; (c) as URLs dos exemplos JSON dos §5.1/§5.2 deixam de conter sintaxe de link Markdown dentro da string; (d) o §6 passa a refletir a localização real das heurísticas (`analyzer/rules/`); (e) o §7 corrige referências de regra (impersonação → RN-05, palavra-chave → RN-06); (f) remoção de itens duplicados no §1.1.
