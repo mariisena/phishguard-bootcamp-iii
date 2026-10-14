@@ -1,120 +1,151 @@
 # PhishGuard
 
-> Serviço de detecção de URLs suspeitas e de phishing via API HTTP.
+> Serviço HTTP para análise local e determinística de URLs suspeitas e de phishing.
 
-**Bootcamp III — Turma B-0726 | Entrega 1**
+**Bootcamp III — Turma B-0726 | Entrega 2**
 
----
+[![CI](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml/badge.svg)](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml)
 
-## Visão Geral
+## Visão geral
 
-O **PhishGuard** é uma API HTTP desenvolvida em Python que recebe uma URL e retorna uma avaliação de risco estruturada. O objetivo é identificar, de forma local e determinística, padrões estruturais associados a ataques de phishing — sem depender de serviços externos.
+O PhishGuard recebe uma URL por HTTP e retorna uma pontuação de risco entre 0 e 100, uma
+classificação (`segura`, `suspeita` ou `perigosa`) e uma lista ordenada de motivos. A análise é
+feita com regras locais, sem consulta a serviços externos.
 
-### Problema que resolve
+| Classificação | Faixa de score |
+| --- | ---: |
+| `segura` | 0–29 |
+| `suspeita` | 30–59 |
+| `perigosa` | 60–100 |
 
-Ataques de phishing frequentemente utilizam URLs com padrões reconhecíveis: endereço IP no lugar de domínio, caractere `@` para ocultar o host real, domínios que imitam marcas conhecidas, TLDs suspeitos, entre outros. O PhishGuard aplica um conjunto de heurísticas sobre a estrutura da URL e retorna uma pontuação de risco (0–100), uma classificação categórica e os motivos que justificam o resultado.
+As regras cobrem host IP, `@` na autoridade, excesso de subdomínios, TLD suspeito, encurtadores,
+impersonação de marca, Punycode/Unicode, ausência de HTTPS, URL longa e palavras-chave sensíveis.
+Os pesos, motivos e critérios normativos estão na [Tabela 4.1 e §4.2 do SDD](docs/SDD.md).
 
-### O que o serviço entrega
+## Fluxo da aplicação
 
-Para cada URL analisada, a resposta contém:
+As verificações nas listas podem encerrar a análise antes das heurísticas. A allowlist tem
+prioridade sobre a blocklist, conforme RN-03 e RN-04.
 
-| Campo             | Descrição                                                         |
-| ----------------- | ----------------------------------------------------------------- |
-| `score`           | Pontuação de risco de 0 a 100                                     |
-| `classification`  | `segura` (0–29), `suspeita` (30–59) ou `perigosa` (60–100)        |
-| `reasons`         | Lista ordenada e determinística dos sinais de risco identificados |
-| `normalized_host` | Host canônico em minúsculas, sem porta e em formato IDNA ASCII    |
+```mermaid
+flowchart TD
+    request["HTTP request"] --> api["analyzer.api<br/>FastAPI"]
+    api --> scorer["analyzer.scorer<br/>orquestração"]
+    scorer --> normalizer["analyzer.url_normalizer<br/>parse e validação"]
+    normalizer --> allowlist{"Host na allowlist?"}
+    allowlist -- "Sim: RN-03" --> allowed["Resultado segura"]
+    allowlist -- "Não" --> blocklist{"Host na blocklist?"}
+    blocklist -- "Sim: RN-04" --> blocked["Resultado perigosa"]
+    blocklist -- "Não" --> heuristics["analyzer.rules/*<br/>heurísticas estruturais"]
+    heuristics --> rn06["RN-06<br/>palavra-chave condicionada"]
+    rn06 --> clamp["RN-01<br/>clamp de 0 a 100"]
+    clamp --> classification["RN-02<br/>classificação"]
+    allowed --> response["analyzer.models<br/>response JSON"]
+    blocked --> response
+    classification --> response
+    response --> httpResponse["HTTP response"]
+```
 
-### Heurísticas implementadas
+## Arquitetura
 
-| Heurística             | Sinal detectado                                                 | Pontos |
-| ---------------------- | --------------------------------------------------------------- | :----: |
-| IP como host           | Host é um endereço IPv4 ou IPv6                                 |   25   |
-| Uso de `@`             | Caractere `@` na seção de autoridade da URL                     |   25   |
-| Excesso de subdomínios | Mais de 3 subdomínios além do domínio base                      |   15   |
-| TLD suspeito           | TLD pertencente à lista fechada definida na spec                |   15   |
-| Encurtador conhecido   | Host pertence à lista de encurtadores monitorados               |   15   |
-| Impersonação de marca  | Host contém nome de marca monitorada fora do domínio oficial    |   25   |
-| Punycode / Unicode     | Host em punycode (`xn--`) ou com caracteres não ASCII           |   25   |
-| Ausência de HTTPS      | Esquema da URL é `http`                                         |   10   |
-| URL muito longa        | URL com mais de 75 caracteres                                   |   10   |
-| Palavra-chave sensível | Palavra sensível no path/query **e** ao menos outro sinal ativo |   20   |
+A decomposição segue o [§6 do SDD](docs/SDD.md) e a interface comum de heurísticas do §6.1.
+As responsabilidades também se relacionam às regras de pontuação da Tabela 4.1, aos critérios e
+listas da Tabela 4.2/§4.2, às RN-01 a RN-06 e aos contratos HTTP do §5.
 
-### Fora de escopo (nesta versão)
+| Módulo/componente | Responsabilidade |
+| --- | --- |
+| `analyzer/api.py` | Rotas FastAPI (`POST /api/v1/analyze` e `GET /health`), conversão dos erros previstos para HTTP 422 e serialização da resposta. |
+| `analyzer/models.py` | Modelos Pydantic dos contratos JSON de request, análise e health. |
+| `analyzer/url_normalizer.py` | Validar e normalizar URLs; produzir a representação estruturada usada pelas regras. |
+| `analyzer/scorer.py` | Orquestrar normalização, precedência allowlist → blocklist → heurísticas, soma dos pontos, RN-06, clamp da RN-01 e classificação da RN-02. |
+| `analyzer/blocklist.py` | Carregar e consultar as listas locais de allowlist e blocklist. |
+| `analyzer/rules/*.py` | Implementar cada heurística como unidade independente; os módulos ficam em `analyzer/rules/`. |
+| `analyzer/config.py` | Centralizar pesos, limiares, listas fechadas e ordem das heurísticas. |
+| `data/allowlist.json` e `data/blocklist.json` | Fornecer as listas locais usadas pelo analisador. |
 
-- Consulta a serviços externos de reputação (Google Safe Browsing, VirusTotal etc.)
-- Persistência em banco de dados
-- Autenticação/autorização de consumidores
-- Interface gráfica
-- Rastreamento de redirecionamentos de URLs encurtadas
+As heurísticas são unidades isoladas e testáveis, conforme o §6.1. O scorer aplica a ordem
+normativa e as regras de negócio; alterações de comportamento devem partir do SDD.
 
----
-
-## Guia de Instalação e Execução
+## Instalação e execução
 
 ### Pré-requisitos
 
-- **Docker** e **Docker Compose** (recomendado — garante reprodutibilidade) **ou**
-- **Python 3.11+** com `pip`
+- Docker Engine com o comando `docker compose`, para a execução conteinerizada; ou
+- Python 3.11 e `pip`, para a execução local.
 
----
+### Docker
 
-### Opção 1 — Com Docker (recomendado)
-
-**Subir a API:**
+Na raiz do repositório, construa a imagem e suba a API:
 
 ```bash
 docker compose up --build
 ```
 
-A API ficará disponível em `http://localhost:8000`.
+A porta `8000` do host é mapeada para a porta `8000` do container. A API estará em
+`http://localhost:8000`, e o Swagger UI em `http://localhost:8000/docs`.
 
-**Executar a suíte de testes:**
+Em outro terminal, execute a suíte no serviço `test`:
 
 ```bash
 docker compose run --rm test
 ```
 
----
+O serviço `api` inicia `analyzer.api:app`; o serviço `test` executa `python -m pytest -v`, conforme
+o [docker-compose.yml](docker-compose.yml).
 
-### Opção 2 — Sem Docker (ambiente local)
+### Ambiente local (Windows PowerShell)
 
-**1. Clone o repositório:**
+Clone o repositório oficial:
 
 ```bash
-git clone https://github.com/<seu-usuario>/phishguard-bootcamp-iii.git
+git clone https://github.com/mariisena/phishguard-bootcamp-iii.git
 cd phishguard-bootcamp-iii
 ```
 
-**2. Crie e ative o ambiente virtual:**
+Crie e ative um ambiente virtual com Python 3.11:
 
-```bash
-python -m venv .venv
-
-# Linux / macOS
-source .venv/bin/activate
-
-# Windows (PowerShell)
+```powershell
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-**3. Instale as dependências:**
+Instale as dependências:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-**4. Execute a suíte de testes:**
+Suba a API:
 
 ```bash
-python -m pytest tests/ -v
+python -m uvicorn analyzer.api:app --reload
 ```
 
----
+A API fica disponível em `http://localhost:8000`. Abra
+[`http://localhost:8000/docs`](http://localhost:8000/docs) para acessar o Swagger UI.
 
-### Endpoints disponíveis
+### Testes
 
-**`POST /api/v1/analyze`** — Analisa uma URL e retorna a avaliação de risco.
+Em Linux/macOS, execute o harness a partir da raiz do repositório com Bash:
+
+```bash
+./scripts/run_harness.sh
+```
+
+O script executa `pytest -v` e grava o log em `logs/`. Para executar a suíte diretamente, inclusive
+no PowerShell:
+
+```bash
+python -m pytest -v
+```
+
+### Endpoints
+
+- `POST /api/v1/analyze` — analisa uma URL enviada em JSON.
+- `GET /health` — retorna o estado de disponibilidade.
+- `GET /docs` — documentação interativa Swagger UI.
+
+Exemplo de chamada:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/analyze \
@@ -122,173 +153,141 @@ curl -X POST http://localhost:8000/api/v1/analyze \
   -d '{"url": "http://192.168.0.1/login"}'
 ```
 
-Exemplo de resposta:
+Resposta real da API para esse exemplo:
 
 ```json
 {
   "url": "http://192.168.0.1/login",
   "normalized_host": "192.168.0.1",
-  "score": 45,
+  "score": 55,
   "classification": "suspeita",
-  "reasons": ["host_ip", "palavra_chave_sensivel_no_path_query"]
+  "reasons": [
+    "host_ip",
+    "sem_https",
+    "palavra_chave_sensivel_no_path_query"
+  ]
 }
 ```
 
-**`GET /health`** — Verifica a disponibilidade do serviço.
+## Evidências
 
-```bash
-curl http://localhost:8000/health
-```
+- Workflow de CI: [![CI](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml/badge.svg)](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml) (`CI`, definido em `.github/workflows/ci.yml`).
+- Suíte local verificada: **246 testes passaram**.
+- Relatório de execução dos testes da Entrega 2 (#98): [docs/evidencias/relatorio_testes_entrega2.md](docs/evidencias/relatorio_testes_entrega2.md)
 
----
+## Documentação e links
 
-## ADRs — Decisões Arquiteturais
+- Especificação técnica (SDD): [docs/SDD.md](docs/SDD.md)
+- Índice das decisões arquiteturais (ADRs): [docs/adr/README.md](docs/adr/README.md)
+- Inspeção e correção de erros lógicos (#99): [docs/registro_correcoes/erros_logicos.md](docs/registro_correcoes/erros_logicos.md)
+- Re-especificação (#100): [docs/re_especificacao.md](docs/re_especificacao.md)
+- Diretrizes para agentes de IA: [docs/AI_AGENTS.md](docs/AI_AGENTS.md)
+- Análise comparativa de ferramentas de IA (#104): **LINK** - ainda não está adicionado na develop
+- Relatório de ética e segurança do uso de IA (#105): [docs/relatorio_ia/etica_seguranca.md](docs/relatorio_ia/etica_seguranca.md)
 
-As decisões técnicas estruturais do projeto estão documentadas na pasta [`docs/adr/`](docs/adr/). Abaixo um registro sintético de cada decisão.
+## Equipe
 
----
+| Nome | GitHub |
+| --- | --- |
+| Mariana Sena | [@mariisena](https://github.com/mariisena) |
+| Ana Clara Carvalho | [@anaacllara](https://github.com/anaacllara) |
+| Matheus Henrique Silva| [@mhsilvaworks](https://github.com/mhsilvaworks) |
+| Henrique Guimarães| [@Henrique-GG](https://github.com/Henrique-GG) |
 
-### ADR-0001 — Python 3.11 + FastAPI + Pydantic
-
-**Status:** Aceita
-
-**Decisão:** Utilizar Python 3.11 como linguagem principal, FastAPI como framework HTTP e Pydantic para validação dos contratos de entrada e saída.
-
-**Por quê:**
-- A equipe possui maior familiaridade com Python do que com as alternativas (Node.js/Express).
-- FastAPI gera documentação OpenAPI automaticamente a partir dos modelos, reduzindo divergência entre código e contrato.
-- Pydantic garante validação estruturada dos payloads JSON com pouco código adicional.
-- Flask e Django foram descartados: Flask exigiria mais código para validação de contratos; Django inclui recursos (ORM, admin) além do necessário para um serviço stateless.
-- pytest integra-se nativamente com o ecossistema Python, simplificando testes unitários e de integração.
-
----
-
-### ADR-0002 — Motor de regras heurísticas (sem Machine Learning)
-
-**Status:** Aceita
-
-**Decisão:** Detectar phishing exclusivamente por meio de regras heurísticas explícitas, determinísticas e explicáveis. Machine Learning e serviços externos de reputação estão fora de escopo nesta versão.
-
-**Por quê:**
-- O projeto segue **Spec-Driven Development (SDD)**: o comportamento esperado deve ser definido em especificação e validado por testes automatizados. Regras heurísticas permitem rastreabilidade direta entre `Requisito → Regra → Implementação → Teste → Motivo da resposta`.
-- ML exigiria dataset rotulado, pipeline de treinamento, versionamento de modelo e critérios para testar decisões — custo fora do escopo da Entrega 1.
-- Serviços externos introduziriam dependência de rede, variação de resultados ao longo do tempo e maior complexidade nos testes determinísticos.
-- Cada heurística é uma função pura, isolada e testável individualmente — propriedade essencial para um Test Harness confiável.
-
----
-
-### ADR-0003 — Serviço stateless, sem banco de dados
-
-**Status:** Aceita
-
-**Decisão:** O PhishGuard não utiliza banco de dados. As listas de domínios (`allowlist` e `blocklist`) são armazenadas em arquivos JSON locais (`data/allowlist.json` e `data/blocklist.json`), carregados em memória na inicialização do serviço.
-
-**Por quê:**
-- O volume de dados (listas pequenas e controladas) não justifica a complexidade de PostgreSQL, Redis ou outro serviço externo.
-- Eliminar banco de dados simplifica o ambiente Docker, o Test Harness e a reprodutibilidade: sem migrations, sem fixtures de banco, sem dependências de conexão.
-- O resultado da análise não depende de requisições anteriores — duas chamadas idênticas retornam o mesmo resultado (determinismo).
-- Adoção futura de banco de dados deverá ser registrada em nova ADR, considerando impactos em arquitetura, testes e desempenho.
-
----
-
-### ADR-0004 — Docker e Docker Compose para padronização do ambiente
-
-**Status:** Aceita
-
-**Decisão:** Usar Docker e Docker Compose como forma padrão de execução da API e da suíte de testes, garantindo reprodutibilidade independentemente do sistema operacional ou configuração local de cada desenvolvedor.
-
-**Por quê:**
-- A equipe trabalha em máquinas com sistemas operacionais e configurações distintas.
-- Docker elimina diferenças de versão do Python, bibliotecas e variáveis de ambiente entre ambientes.
-- `docker compose run --rm test` permite executar o Test Harness de forma padronizada e reproduzível.
-- A execução local sem Docker também é suportada como alternativa, desde que o Python 3.11 e as dependências do `requirements.txt` estejam disponíveis.
-
----
-
-### ADR-0005 — Claude Code como agente de IA no fluxo SDD
-
-**Status:** Aceita
-
-**Decisão:** Adotar o Claude Code como agente de IA principal, operando dentro das diretrizes do `CLAUDE.md`, das regras em `.claude/rules/` e do SDD.
-
-**Por quê:**
-- O agente acelera a geração de código estruturado (heurísticas, testes, documentação) respeitando os contratos definidos na especificação.
-- A adoção é condicionada ao fluxo **Especificar → Testar → Implementar → Validar**: o agente não deve alterar pesos, contratos ou regras de negócio sem aprovação humana explícita.
-- Qualquer divergência identificada entre código, testes e SDD deve ser reportada ao time antes de ser resolvida.
-
----
-
-### ADR-0006 — Contagem de subdomínios sem Public Suffix List
-
-**Status:** Aceita
-
-**Decisão:** Tratar os dois últimos labels do host como domínio-base; a RF-07 dispara com mais de três subdomínios.
-
-**Trade-off:** regra local e determinística, ao custo de falso positivo em sufixos de dois níveis (`a.b.c.banco.com.br` dispara com 3 subdomínios reais).
-
----
-
-### ADR-0007 — Impersonação de marca por inclusão + leet speak
-
-**Status:** Aceita
-
-**Decisão:** Disparar quando o nome da marca, após normalização leet (`0→o`, `1→l`, `3→e`, `4→a`, `5→s`, `7→t`), estiver contido no host e o host não for o domínio oficial.
-
-**Trade-off:** pega `paypa1-secure` e `paypalsecure`, mas gera falsos positivos por coincidência de letras (`capitaurbana.com` → `itau`, issue #91).
-
----
-
-### ADR-0008 — Contrato determinístico, sem `checked_at`
-
-**Status:** Aceita
-
-**Decisão:** A resposta contém só `url`, `normalized_host`, `score`, `classification` e `reasons`; nenhum campo gerado no momento da requisição.
-
-**Trade-off:** garante o RNF-02 na resposta inteira, mas a API não informa quando a análise foi feita.
-
----
-
-### ADR-0009 — CI com GitHub Actions
-
-**Status:** Aceita
-
-**Decisão:** Rodar em todo push e PR dois jobs: `pytest` com relatório publicado como artefato, e `docker compose run --rm test`.
-
-**Trade-off:** a suíte roda num ambiente limpo a cada mudança, mas sem proteção de branch (#94) o CI informa e não bloqueia o merge.
-
-O índice completo, com o principal trade-off de cada decisão, está em [`docs/adr/README.md`](docs/adr/README.md).
-
----
-
-## Estrutura do Projeto
+## Estrutura do projeto
 
 ```text
 phishguard-bootcamp-iii/
+├── .claude/
+│   ├── commands/
+│   │   └── commit.md
+│   └── rules/
+│       ├── codigo.md
+│       ├── seguranca.md
+│       └── testes.md
+├── .dockerignore
+├── .gitattributes
+├── .github/
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/ci.yml
+├── .gitignore
 ├── analyzer/
-│   ├── config.py           # Constantes normativas (pesos, listas, limiares)
-│   ├── models.py           # Schemas Pydantic de request/response
-│   ├── scorer.py           # Motor de orquestração e pontuação
-│   ├── url_normalizer.py   # Validação e normalização da URL
-│   ├── blocklist.py        # Consulta a allowlist e blocklist locais
-│   └── rules/              # Uma heurística por arquivo (funções puras)
+│   ├── __init__.py
+│   ├── api.py
+│   ├── blocklist.py
+│   ├── config.py
+│   ├── models.py
+│   ├── rules/
+│   │   ├── __init__.py
+│   │   ├── at_symbol.py
+│   │   ├── brand_impersonation.py
+│   │   ├── excessive_subdomains.py
+│   │   ├── ip_domain.py
+│   │   ├── missing_https.py
+│   │   ├── punycode_homograph.py
+│   │   ├── suspicious_keywords.py
+│   │   ├── suspicious_tld.py
+│   │   ├── url_length.py
+│   │   └── url_shortener.py
+│   ├── scorer.py
+│   ├── url_normalizer.py
 ├── data/
 │   ├── allowlist.json
 │   └── blocklist.json
-├── docs/
-│   ├── SDD.md              # Especificação técnica (fonte da verdade)
-│   └── adr/                # Decisões arquiteturais (ADR-0001 a ADR-0009)
-├── tests/                  # Suíte de testes (pytest)
 ├── docker-compose.yml
 ├── Dockerfile
+├── docs/
+│   ├── AI_AGENTS.md
+│   ├── SDD.md
+│   ├── adr/
+│   │   ├── README.md
+│   │   ├── 0001-linguagem-e-framework.md
+│   │   ├── 0002-heuristicas-vs-ml.md
+│   │   ├── 0003-stateless-sem-banco.md
+│   │   ├── 0004-docker-padronizacao-ambiente.md
+│   │   ├── 0005-agente-ia-claude-code.md
+│   │   ├── 0006-subdominios-sem-public-suffix-list.md
+│   │   ├── 0007-marca-por-inclusao-e-leet-speak.md
+│   │   ├── 0008-contrato-deterministico-sem-checked-at.md
+│   │   └── 0009-ci-github-actions.md
+|   ├── evidencias/
+│   │   ├── relatorio_testes_entrega2.md
+│   ├── re_especificacao.md
+│   ├── registro_correcoes/
+│   │   ├── correcoes_10_09.md
+│   │   └── erros_logicos.md
+│   └── relatorio_ia/
+│       └── etica_seguranca.md
+├── logs_test_harness.txt
+├── Linha_Tempo.md
+├── CHECKLIST_ENTREGAS.md
+├── CLAUDE.md
+├── README.md
+├── scripts/
+│   └── run_harness.sh
+└── tests/
+│   ├── integration/
+│   │   ├── test_api.py
+│   │   ├── test_detector.py
+│   │   └── test_performance.py
+│   └── unit/
+│       ├── test_at_symbol.py
+│       ├── test_blocklist.py
+│       ├── test_brand_impersonation.py
+│       ├── test_config_consistency.py
+│       ├── test_excessive_subdomains.py
+│       ├── test_ip_domain.py
+│       ├── test_missing_https.py
+│       ├── test_punycode_homograph.py
+│       ├── test_scorer.py
+│       ├── test_suspicious_keywords.py
+│       ├── test_suspicious_tld.py
+│       ├── test_url_length.py
+│       ├── test_url_normalizer.py
+│       └── test_url_shortener.py
+├── pytest.ini
 ├── requirements.txt
-└── CLAUDE.md               # Diretrizes para agentes de IA e convenções do projeto
 ```
 
----
-
-## Documentação Completa
-
-- **Especificação técnica:** [`docs/SDD.md`](docs/SDD.md)
-- **Decisões arquiteturais:** [`docs/adr/`](docs/adr/)
-- **Diretrizes para agentes de IA:** [`CLAUDE.md`](CLAUDE.md)
-- **Inspeção e correção de erros lógicos:** [`docs/registro_correcoes/erros_logicos.md`](docs/registro_correcoes/erros_logicos.md)
+## Licença
+Decisao pendente a discutir com grupo.
