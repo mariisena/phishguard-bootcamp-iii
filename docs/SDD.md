@@ -39,7 +39,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | **RF-06** | O sistema deve identificar uso do caractere @ na seção de autoridade/userinfo da URL, sinal associado à ocultação do host real. |
 | **RF-07** | O sistema deve identificar excesso de subdomínios conforme a regra operacional definida na seção 4.2. |
 | **RF-08** | O sistema deve identificar TLDs da lista fechada de TLDs suspeitos definida nesta especificação. |
-| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. |
+| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. A correspondência é por igualdade exata OU por sufixo com fronteira de ponto: o host dispara se `host == encurtador` ou se `host` termina em `"." + encurtador`. Assim, `www.bit.ly` e `m.bit.ly` disparam, mas `notbit.ly` (sem ponto de fronteira) e `bit.ly.evil.com` (encurtador no meio do host, não no final) não disparam. |
 | **RF-10** | O sistema deve identificar possível impersonação de marcas monitoradas quando o host contiver o nome da marca, mas não pertencer ao domínio oficial cadastrado para essa marca. |
 | **RF-11** | O sistema deve identificar hosts em Punycode (xn--) ou hosts originalmente informados com caracteres não ASCII/Unicode. |
 | **RF-12** | O sistema deve identificar ausência de HTTPS quando o esquema da URL for http. |
@@ -334,6 +334,10 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 **Descrição**: Reorganização dos testes em `tests/unit/` e `tests/integration/`, mantendo as evidências geradas pelo harness em `logs/`.
 **Justificativa**: Alinhar a estrutura do repositório ao §7.1 do SDD após a divergência deixada pela issue #66, encerrada como concluída sem a reorganização correspondente.
 
+**Data**: 2026-10-13
+**Descrição**: O RF-09 passou a adotar correspondência por sufixo com fronteira de ponto, além da igualdade exata já existente. O host dispara se for igual ao encurtador ou se terminar em `"." + encurtador`. Exemplos: `www.bit.ly` e `m.bit.ly` passam a disparar; `notbit.ly` (sem fronteira) e `bit.ly.evil.com` (encurtador no meio) continuam não disparando.
+**Justificativa** (Issue #90 / PR #88): A correspondência puramente exata permitia que `www.bit.ly` escapasse da heurística, pois o N-07 remove o `www.` apenas nas consultas à allowlist/blocklist, e não nas heurísticas. O grupo decidiu pela opção B: cobrir subdomínios de encurtadores conhecidos, evitando que o usuário comum que copia ou digita links com `www.` contorne a detecção.
+
 **Data**: 2026-10-11
 **Descrição**: Revisão de consistência pós-Entrega 1, sem alteração de regra de negócio, peso, limiar ou lista: (a) RF-01 passa a citar o endpoint correto `POST /api/v1/analyze`; (b) o campo `checked_at` foi retirado do exemplo de response do §5.2, alinhando o exemplo à nota do próprio §5.2 que já o removera do contrato por causa do RNF-02; (c) as URLs dos exemplos JSON dos §5.1/§5.2 deixam de conter sintaxe de link Markdown dentro da string; (d) o §6 passa a refletir a localização real das heurísticas (`analyzer/rules/`); (e) o §7 corrige referências de regra (impersonação → RN-05, palavra-chave → RN-06); (f) remoção de itens duplicados no §1.1.
 **Justificativa**: A revisão do repositório no início da Entrega 2 identificou divergências entre o texto do SDD, o código e os testes. Como o SDD é a fonte da verdade, as divergências puramente documentais foram corrigidas aqui; a remoção de `checked_at` do código (`models.py`/`api.py`) é tratada em alteração separada, seguindo esta especificação.
@@ -363,3 +367,4 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 | v1.2 | 2026-09-22 | Definição de escopo e conteúdo inicial das listas de allowlist e blocklist. | Refinamento por Feedback (#61) | Ana Clara |
 | v1.3 | 2026-10-11 | Revisão de consistência: endpoint do RF-01, remoção de `checked_at` do exemplo §5.2, localização das heurísticas, referências RN no §7. | Revisão pós-Entrega 1 | Mariana |
 | v1.3 | 2026-10-13 | Documentação da limitação da RN-05 para marcas contidas em palavras legítimas; testes fixam `capitaurbana.com` e `caixadesom.com`. | Refinamento por Feedback (PR #88) | Ana Clara |
+| v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara
