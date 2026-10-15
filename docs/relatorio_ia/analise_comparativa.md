@@ -29,13 +29,13 @@ Esta análise se baseia **somente no uso real** relatado pelos integrantes nos c
 | Critério | Claude Code | Chat web (Claude, Gemini) | Antigravity | GitHub Copilot (VS Code, Codespaces) | Codex CLI | Cursor |
 | -------- | ----------- | ------------------------- | ----------- | ------------------------------------ | --------- | ------ |
 | Aderência às regras (`CLAUDE.md`, SDD) | **Forte**: leu `CLAUDE.md` e `.claude/rules/` e não mudou pesos, listas, contratos nem a `main` por conta própria | **Parcial**: perdeu o contexto da árvore de arquivos e teve alucinações de contexto; exigiu prompts muito detalhados | **Parcial**¹: desalinhamento com o SDD no início, que melhorou com arquivos de contexto e prompts estruturados | **Parcial**¹: mesma observação | Não usada | Não usada |
-| Qualidade do código gerado | **Forte**: refatorou heurísticas para o contrato `check(parsed)` e corrigiu imports quebrados escritos por uma pessoa | Sem relato (usado para documentação) | **Parcial**¹: gerou funções e testes, mas com imports e dependências inadequados | **Parcial**¹: refinou testes; mesmas ressalvas | Não usada | Não usada |
+| Qualidade do código gerado | **Forte**: refatorou heurísticas para o contrato `check(parsed)` e corrigiu imports quebrados escritos por uma pessoa | Sem relato (usado para documentação e prompts) | **Parcial**¹: gerou a lógica e os testes, mas foi a que mais produziu imports e dependências inadequados | **Parcial**¹: refinou testes; também gerou imports inadequados, em menor grau | Não usada | Não usada |
 | Escrita e revisão da especificação | **Forte**: revisão de consistência do SDD v1.3 | **Forte**: "altamente eficaz" para estruturar prompts, especificações e documentos técnicos | Sem relato | **Parcial**: usado para refinar as especificações finais da Entrega 2, sem avaliação detalhada | Não usada | Não usada |
-| Revisão de código e divergências | **Forte**: encontrou issues fechadas sem entrega (#97, #118) e links quebrados (#96), sempre a partir de um problema pedido | Sem relato | **Fraco**¹: não apontou divergências de arquitetura sem direcionamento explícito | **Fraco**¹: mesma observação | Não usada | Não usada |
+| Revisão de código e divergências | **Forte**: encontrou issues fechadas sem entrega (#97, #118) e links quebrados (#96), sempre a partir de um problema pedido | Sem relato | **Fraco**¹: não apontou divergências de arquitetura sem direcionamento explícito e fechou issues antes de a entrega estar completa (#66) | **Fraco**¹: não apontou divergências de arquitetura sem direcionamento explícito | Não usada | Não usada |
 | Integração com o fluxo (terminal, IDE, git, PR) | **Forte**: cria branch, commita, abre PR, confere CI e roda Docker, tudo com aprovação manual | **Parcial**: copiar e colar para o VS Code; menos prático, mas cada bloco foi auditado antes de entrar | **Parcial**: ajudou a descrever problemas e PRs; git conduzido manualmente | **Fraco**: no Codespaces, modificou arquivos sem pedir permissão | Não usada | Não usada |
 | Custo, acesso e curva de aprendizado | **Forte**: plano Pro, sem esgotar o limite; ensinou o que fazer e como fazer | Sem relato de custo | **Fraco**: sem assinatura paga, a cota esgotava com frequência e exigia trocar de modelo manualmente | **Forte**: custo baixo pelo plano de estudante do GitHub | Não usada | Não usada |
 
-¹ O relato de anaacllara descreve esse critério para "as ferramentas" ou "os agentes" em geral, sem separar Antigravity de Copilot. A mesma avaliação foi repetida nas duas colunas e deve ser confirmada pela autora.
+¹ O relato original de anaacllara descrevia esses critérios para "as ferramentas" em geral. Na revisão do [PR #124](https://github.com/mariisena/phishguard-bootcamp-iii/pull/124), a autora confirmou que aderência e revisão valem para as duas. Também confirmou que os imports e dependências inadequados apareceram nas duas, com destaque para o Antigravity, e que o fechamento prematuro de issues foi do Antigravity.
 
 ## Detalhes por ferramenta
 
@@ -79,28 +79,38 @@ Esta análise se baseia **somente no uso real** relatado pelos integrantes nos c
 
 ### Google Antigravity
 
-**Quem usou e como:** anaacllara, para gerar código a partir de arquivos existentes.
+**Quem usou e como:** anaacllara, do começo do projeto até o PR #114, para gerar código a partir de arquivos existentes. Os prompts eram escritos com o Claude web, e cada resultado era avaliado por ela depois da execução.
 
 **Pontos fortes**
 - Ajudou a estruturar a lógica e a gerar funções e testes.
 
 **Limitações**
 - Sem assinatura paga, a cota esgotava com frequência e exigia trocar de modelo manualmente.
-- Gerou imports ou dependências inadequados, corrigidos na validação humana.¹
+- Foi a ferramenta que mais gerou imports ou dependências inadequados, corrigidos na validação humana.
+- Fechou issues antes de a entrega estar completa.
 
-**Exemplos rastreáveis:** ⚠️ **a confirmar pela autora.** Os PRs de anaacllara na Entrega 2 são [#113](https://github.com/mariisena/phishguard-bootcamp-iii/pull/113), [#114](https://github.com/mariisena/phishguard-bootcamp-iii/pull/114), [#115](https://github.com/mariisena/phishguard-bootcamp-iii/pull/115), [#116](https://github.com/mariisena/phishguard-bootcamp-iii/pull/116), [#117](https://github.com/mariisena/phishguard-bootcamp-iii/pull/117) e [#119](https://github.com/mariisena/phishguard-bootcamp-iii/pull/119), mas o relato não diz qual ferramenta foi usada em cada um.
+**Exemplos rastreáveis**
+- [PR #113](https://github.com/mariisena/phishguard-bootcamp-iii/pull/113): RF-09 estendido a subdomínios de encurtadores
+- [PR #114](https://github.com/mariisena/phishguard-bootcamp-iii/pull/114): limitação conhecida da RN-05 documentada e testada
+- [Issue #66](https://github.com/mariisena/phishguard-bootcamp-iii/issues/66): fechada antes de a reorganização da suíte estar completa
+- Segundo a autora, os PRs dela anteriores ao #115 também foram feitos com o Antigravity, como o [#40](https://github.com/mariisena/phishguard-bootcamp-iii/pull/40) (heurísticas e scorer) e o [#79](https://github.com/mariisena/phishguard-bootcamp-iii/pull/79) (cobertura da seção 7 do SDD).
 
 ### GitHub Copilot (VS Code e Codespaces)
 
-**Quem usou e como:** anaacllara, para refinar testes e as especificações finais da Entrega 2.
+**Quem usou e como:** anaacllara, a partir do PR #115, para refinar testes e as especificações finais da Entrega 2.
 
 **Pontos fortes**
 - Custo baixo, pelo plano de estudante do GitHub.
 
 **Limitações**
 - No Codespaces, teve comportamento autônomo excessivo: modificou arquivos diretamente sem pedir permissão.
+- Também gerou imports inadequados, em menor grau que o Antigravity.
 
-**Exemplos rastreáveis:** ⚠️ **a confirmar pela autora**, pelos mesmos motivos da seção anterior.
+**Exemplos rastreáveis**
+- [PR #115](https://github.com/mariisena/phishguard-bootcamp-iii/pull/115): testes reorganizados em `unit/` e `integration/`
+- [PR #116](https://github.com/mariisena/phishguard-bootcamp-iii/pull/116): linha do tempo
+- [PR #117](https://github.com/mariisena/phishguard-bootcamp-iii/pull/117): relatório de execução dos testes
+- [PR #119](https://github.com/mariisena/phishguard-bootcamp-iii/pull/119): README da entrega intermediária
 
 ### Codex CLI e Cursor
 
@@ -133,4 +143,4 @@ O [relatório de ética](etica_seguranca.md) registra dois incidentes com agente
 
 ---
 
-<sub>Documento consolidado pelo Claude Code a partir dos relatos da issue #104, a pedido de @mariisena. Exige revisão humana; as células marcadas com ⚠️ ou ¹ dependem de confirmação da autora do relato.</sub>
+<sub>Documento consolidado pelo Claude Code a partir dos relatos da issue #104, a pedido de @mariisena. Exige revisão humana. As células marcadas com ¹ foram confirmadas por anaacllara na revisão do PR #124.</sub>
