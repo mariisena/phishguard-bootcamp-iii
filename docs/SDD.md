@@ -2,9 +2,9 @@
 
 **Projeto:** PhishGuard — Detector de URLs Suspeitas/Phishing
 **Disciplina:** Bootcamp III — Turma B-0726
-**Entrega:** 1 — Ambiente, Especificação Técnica e Test Harness
+**Entrega:** 1 — Ambiente, Especificação Técnica e Test Harness / 2 — Publicação, Refinamento e Análise Crítica
 **Metodologia:** Spec-Driven Development (SDD)
-**Versão do documento:** 1.0
+**Versão do documento:** 1.3
 **Última atualização:** ver seção 8 (Histórico de Versões)
 
 ---
@@ -22,11 +22,8 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 - Autenticação/autorização de usuários da API.
 - Interface gráfica (o consumo é via API HTTP; a suíte de testes cobre o contrato da API).
 - Resolução ou acompanhamento de redirecionamentos de URLs encurtadas.
--Persistência em banco de dados; o serviço não mantém estado persistente entre requisições.
--	Autenticação e autorização de consumidores da API.
--	Interface gráfica; o consumo é exclusivamente via API HTTP.
--	Detecção avançada de typosquatting por distância de edição, modelos de linguagem ou aprendizado de máquina. Nesta versão, a regra de marca cobre impersonação por inclusão do nome da marca no host.
--	Uso de Public Suffix List externa; a regra de subdomínios utiliza uma aproximação determinística definida na seção 4.2.
+- Detecção avançada de typosquatting por distância de edição, modelos de linguagem ou aprendizado de máquina. Nesta versão, a regra de marca cobre impersonação por inclusão do nome da marca no host.
+- Uso de Public Suffix List externa; a regra de subdomínios utiliza uma aproximação determinística definida na seção 4.2.
 
 ---
 
@@ -34,7 +31,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 
 | ID | Requisito |
 |----|-----------|
-| **RF-01** | O sistema deve receber uma URL (string) via `POST /analyze` e retornar uma pontuação de risco de 0 a 100. |
+| **RF-01** | O sistema deve receber uma URL (string) via `POST /api/v1/analyze` e retornar uma pontuação de risco de 0 a 100. |
 | **RF-02** | O sistema deve classificar a URL em `segura` (0–29), `suspeita` (30–59) ou `perigosa` (60–100). |
 | **RF-03** | O sistema deve retornar uma lista ordenada de motivos que justifique a pontuação ou eventual sobreposição por lista local. |
 | **RF-04** | O sistema deve normalizar e validar a entrada antes da análise, aceitando apenas URLs HTTP(S) absolutas com host válido. |
@@ -42,7 +39,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | **RF-06** | O sistema deve identificar uso do caractere @ na seção de autoridade/userinfo da URL, sinal associado à ocultação do host real. |
 | **RF-07** | O sistema deve identificar excesso de subdomínios conforme a regra operacional definida na seção 4.2. |
 | **RF-08** | O sistema deve identificar TLDs da lista fechada de TLDs suspeitos definida nesta especificação. |
-| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. |
+| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. A correspondência é por igualdade exata OU por sufixo com fronteira de ponto: o host dispara se `host == encurtador` ou se `host` termina em `"." + encurtador`. Assim, `www.bit.ly` e `m.bit.ly` disparam, mas `notbit.ly` (sem ponto de fronteira) e `bit.ly.evil.com` (encurtador no meio do host, não no final) não disparam. |
 | **RF-10** | O sistema deve identificar possível impersonação de marcas monitoradas quando o host contiver o nome da marca, mas não pertencer ao domínio oficial cadastrado para essa marca. |
 | **RF-11** | O sistema deve identificar hosts em Punycode (xn--) ou hosts originalmente informados com caracteres não ASCII/Unicode. |
 | **RF-12** | O sistema deve identificar ausência de HTTPS quando o esquema da URL for http. |
@@ -57,7 +54,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 ## 3. Requisitos Não-Funcionais (RNF)
 
 | ID | Requisito | Descrição |
-|----|-----------|
+|----|-----------|-----------|
 | **RNF-01** | **Desempenho** | Cada análise deve ser concluída em até 300 ms em ambiente de desenvolvimento padrão, sem chamadas de rede a terceiros e com processamento predominantemente em memória. |
 | **RNF-02** | **Determinismo** | Para a mesma entrada e a mesma versão de configuração/listas, url, normalized_host, score, classification e reasons devem ser idênticos. A ordem de reasons também é determinística. |
 | **RNF-03** | **Testabilidade** | Cada heurística deve ser uma função pura testável isoladamente da camada HTTP e das demais heurísticas. |
@@ -121,6 +118,8 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | nubank | nubank.com.br |
 | amazon | amazon.com, amazon.com.br |
 
+**Limitação conhecida da RN-05**: a regra procura o nome da marca por inclusão de substring no host, após a normalização leet básica. Por isso, palavras legítimas que contenham o nome de uma marca podem gerar falso positivo. Por exemplo, `https://capitaurbana.com` dispara para `itau`, e `https://caixadesom.com` dispara para `caixa`. Esse comportamento está dentro do escopo especificado; a detecção avançada de typosquatting continua fora de escopo nesta entrega.
+
 **Critério de subdomínios nesta entrega**: para hosts que não são IP, o hostname é separado por pontos. Para manter a implementação local e determinística sem Public Suffix List, os dois últimos labels são tratados como domínio-base; a heurística dispara quando houver mais de três labels anteriores a esses dois. Portanto, a.b.c.d.example.com dispara (4 subdomínios) e a.b.c.example.com não dispara (3). Essa aproximação é conhecida e poderá ser substituída por uma Public Suffix List em evolução futura.
 
 **Critério de Punycode/Unicode**: a heurística dispara se o host original possuir qualquer caractere não ASCII ou se a forma canônica IDNA contiver label iniciado por xn--. O normalizador deve preservar informação suficiente para essa checagem antes/depois da conversão IDNA.
@@ -137,7 +136,7 @@ Content-Type: `application/json`
 
 ```json
 {
-  "url": "[http://paypa1-secure.verify-account.top/login](http://paypa1-secure.verify-account.top/login)"
+  "url": "http://paypa1-secure.verify-account.top/login"
 }
 
 ```
@@ -150,7 +149,7 @@ Content-Type: `application/json`
 
 ```json
 {
-  "url": "[http://paypa1-secure.verify-account.top/login](http://paypa1-secure.verify-account.top/login)",
+  "url": "http://paypa1-secure.verify-account.top/login",
   "normalized_host": "paypa1-secure.verify-account.top",
   "score": 70,
   "classification": "perigosa",
@@ -159,8 +158,7 @@ Content-Type: `application/json`
     "possivel_impersonacao_marca:paypal",
     "sem_https",
     "palavra_chave_sensivel_no_path_query"
-  ],
-  "checked_at": "2026-08-31T13:00:00Z"
+  ]
 }
 
 ```
@@ -211,7 +209,8 @@ Para campo ausente, null, vazio, tipo incorreto ou tamanho fora de 1–2048 cara
 
 O sistema é decomposto em unidades isoladas e independentemente testáveis, permitindo
 desenvolvimento e testes iterativos por componente (cada uma vira uma *issue* própria no
-GitHub Projects — ver `GITHUB_SETUP.md`):
+GitHub Projects). Os módulos ficam no pacote `analyzer/`; as heurísticas ficam em
+`analyzer/rules/`, um arquivo por regra:
 
 ```text
 ┌──────────────┐ 
@@ -228,7 +227,7 @@ GitHub Projects — ver `GITHUB_SETUP.md`):
                        └────────┬─────────┘
                                 ▼
 ┌──────────────┐     ┌────────────────────┐
-│url_normalizer│     │  heuristics/*.py   │
+│url_normalizer│     │  rules/*.py        │
 │.py (parse +  │◀───│  (uma função pura   │
 │ validação)   │     │  por regra de      │
 └──────────────┘     │  negócio RF-05..14)|
@@ -246,7 +245,7 @@ GitHub Projects — ver `GITHUB_SETUP.md`):
 | --- | --- | --- |
 | `models.py` | Schemas Pydantic de request/response e tipos compartilhados. | Via testes de contrato e validação de schema. |
 | `url_normalizer.py` | Validar e parsear a URL; produzir `ParsedURL` e InvalidURLError em entradas inválidas. | Sim — sem dependências externas. |
-| `heuristics/*.py` | Uma regra por módulo/função pura: (`ParsedURL`) -> `HeuristicResult`. | Sim, isoladamente. |
+| `rules/*.py` | Uma regra por módulo/função pura: (`ParsedURL`) -> `HeuristicResult`. | Sim, isoladamente. |
 | `scorer.py` | Orquestrar normalização, listas e heurísticas; aplicar RN-01 a RN-09; produzir `AnalysisResult`. | Sim, via *fakes*/*fixtures*. |
 | `blocklist.py` | Carregar `allowlist.json` e `blocklist.json` locais e checar host canônico. | Sim, com fixtures/listas de teste. |
 | `api.py` |Rotas FastAPI, tratamento de erros e serialização JSON. | Sim, via `TestClient`. |
@@ -287,8 +286,8 @@ URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL
 * URL de encurtador conhecido;
 * URL com mais de 2048 caracteres;
 * Domínio com muitos subdomínios (`a.b.c.d.e.exemplo.com`);
-* Domínio oficial de marca monitorada (não deve disparar impersonação — RN-06);
-* URL com palavra sensível mas sem nenhum outro sinal (não deve subir de faixa — RN-07);
+* Domínio oficial de marca monitorada (não deve disparar impersonação — RN-05);
+* URL com palavra sensível mas sem nenhum outro sinal (não deve subir de faixa — RN-06);
 * Mesma URL testada duas vezes deve retornar exatamente o mesmo resultado (RNF-02).
 
 
@@ -298,23 +297,50 @@ URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL
 
 tests/
 ├── unit/
-│   ├── test_url_normalizer.py
-│   ├── test_heuristics_*.py
+│   ├── test_at_symbol.py
+│   ├── test_blocklist.py
+│   ├── test_brand_impersonation.py
+│   ├── test_config_consistency.py
+│   ├── test_excessive_subdomains.py
+│   ├── test_ip_domain.py
+│   ├── test_missing_https.py
+│   ├── test_punycode_homograph.py
 │   ├── test_scorer.py
-│   └── test_config_consistency.py
+│   ├── test_suspicious_keywords.py
+│   ├── test_suspicious_tld.py
+│   ├── test_url_length.py
+│   ├── test_url_normalizer.py
+│   └── test_url_shortener.py
 ├── integration/
-│   ├── test_analyze_api.py
-│   └── test_health_api.py
-└── evidence/
-    └── test-report.xml / test-report.txt
+│   ├── test_api.py
+│   ├── test_detector.py
+│   └── test_performance.py
 
 ```
+
+O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não há diretório `tests/evidence/`.
 
 > Os testes de desempenho devem usar tolerância adequada ao ambiente e não substituir os testes funcionais. O requisito RNF-01 pode ser validado por benchmark dedicado ou medição agregada, evitando flutuações excessivas em um único teste de CI.
 > 
 ---
 
 ## 8. Refinamento por Feedback
+
+**Data**: 2026-10-13
+**Descrição**: Documentação da limitação conhecida da RN-05: a busca do nome da marca por substring pode sinalizar palavras legítimas, como `capitaurbana.com` (itau) e `caixadesom.com` (caixa). Testes adicionados para preservar esse comportamento especificado, sem alteração da heurística.
+**Justificativa** (PR #88): A limitação foi levantada durante a revisão do PR #88. Como a detecção por inclusão está dentro do escopo definido e typosquatting avançado está fora de escopo, a mudança registra os falsos positivos conhecidos e evita alteração acidental da regra.
+
+**Data**: 2026-10-13
+**Descrição**: Reorganização dos testes em `tests/unit/` e `tests/integration/`, mantendo as evidências geradas pelo harness em `logs/`.
+**Justificativa**: Alinhar a estrutura do repositório ao §7.1 do SDD após a divergência deixada pela issue #66, encerrada como concluída sem a reorganização correspondente.
+
+**Data**: 2026-10-13
+**Descrição**: O RF-09 passou a adotar correspondência por sufixo com fronteira de ponto, além da igualdade exata já existente. O host dispara se for igual ao encurtador ou se terminar em `"." + encurtador`. Exemplos: `www.bit.ly` e `m.bit.ly` passam a disparar; `notbit.ly` (sem fronteira) e `bit.ly.evil.com` (encurtador no meio) continuam não disparando.
+**Justificativa** (Issue #90 / PR #88): A correspondência puramente exata permitia que `www.bit.ly` escapasse da heurística, pois o N-07 remove o `www.` apenas nas consultas à allowlist/blocklist, e não nas heurísticas. O grupo decidiu pela opção B: cobrir subdomínios de encurtadores conhecidos, evitando que o usuário comum que copia ou digita links com `www.` contorne a detecção.
+
+**Data**: 2026-10-11
+**Descrição**: Revisão de consistência pós-Entrega 1, sem alteração de regra de negócio, peso, limiar ou lista: (a) RF-01 passa a citar o endpoint correto `POST /api/v1/analyze`; (b) o campo `checked_at` foi retirado do exemplo de response do §5.2, alinhando o exemplo à nota do próprio §5.2 que já o removera do contrato por causa do RNF-02; (c) as URLs dos exemplos JSON dos §5.1/§5.2 deixam de conter sintaxe de link Markdown dentro da string; (d) o §6 passa a refletir a localização real das heurísticas (`analyzer/rules/`); (e) o §7 corrige referências de regra (impersonação → RN-05, palavra-chave → RN-06); (f) remoção de itens duplicados no §1.1.
+**Justificativa**: A revisão do repositório no início da Entrega 2 identificou divergências entre o texto do SDD, o código e os testes. Como o SDD é a fonte da verdade, as divergências puramente documentais foram corrigidas aqui; a remoção de `checked_at` do código (`models.py`/`api.py`) é tratada em alteração separada, seguindo esta especificação.
 
 **Data**: 2026-09-15
 **Descrição**: O exemplo de response JSON na seção 5.2 usava o código de motivo `"palavra_chave_sensivel_no_path"`, inconsistente com o código normativo `"palavra_chave_sensivel_no_path_query"` definido na Tabela 4.1.
@@ -339,3 +365,6 @@ tests/
 | v1.2 | 2026-09-12 | Atualização da RN-05 para admitir normalização leet speak básica. | Refinamento por Feedback (#59) | Ana Clara |
 | v1.2 | 2026-09-17 | Correção da flag para palavra_chave_sensivel_no_path_query no §5.2. | Refinamento por Feedback (#60) | Ana Clara |
 | v1.2 | 2026-09-22 | Definição de escopo e conteúdo inicial das listas de allowlist e blocklist. | Refinamento por Feedback (#61) | Ana Clara |
+| v1.3 | 2026-10-11 | Revisão de consistência: endpoint do RF-01, remoção de `checked_at` do exemplo §5.2, localização das heurísticas, referências RN no §7. | Revisão pós-Entrega 1 | Mariana |
+| v1.3 | 2026-10-13 | Documentação da limitação da RN-05 para marcas contidas em palavras legítimas; testes fixam `capitaurbana.com` e `caixadesom.com`. | Refinamento por Feedback (PR #88) | Ana Clara |
+| v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara

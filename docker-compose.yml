@@ -9,7 +9,7 @@ services:
     volumes:
       - .:/app
     
-    command: ["uvicorn", "phishguard.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "analyzer.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       - PYTHONUNBUFFERED=1
 

@@ -53,6 +53,11 @@ A documentação sobre o uso de agentes de IA no projeto ficará registrada em:
 docs/AI_AGENTS.md
 ```
 
+Regras complementares, separadas por tema (código, testes e segurança), ficam em
+`.claude/rules/`. Elas são carregadas pelo Claude Code junto com o `CLAUDE.md` (a de segurança
+sempre; as de código e testes quando o agente trabalha nos arquivos correspondentes) e são
+descritas em `docs/AI_AGENTS.md`.
+
 O arquivo `CLAUDE.md` será considerado parte do contexto operacional do projeto, enquanto `docs/SDD.md` continuará sendo a **fonte da verdade para requisitos, regras de negócio e contratos da aplicação**.
 
 A hierarquia esperada é:
