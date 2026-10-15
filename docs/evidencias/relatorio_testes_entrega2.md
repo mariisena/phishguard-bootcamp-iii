@@ -2,24 +2,19 @@
 
 **Data:** 14/10/2026  
 **Commit avaliado:** `7dbda30` (`7dbda300e21d770e9c141381278b1c7f0ea6d1cd`)  
-**Escopo:** evidências coletadas nesta execução, sem alterações em `analyzer/`, testes, configuração de testes, Docker ou CI.
+**Escopo:** evidências coletadas nesta execução, sem alterações em `analyzer/`, testes, configuração de testes, Docker ou CI.  
+**Atualização em 15/10/2026:** execução Docker local incluída (#118), no commit `49696c0` da `develop`, cuja árvore é idêntica à da `main` em `93e0fcb` (tag `v2.0.0`). Entre `7dbda30` e `49696c0` só entraram documentos; `analyzer/` e `tests/` não mudaram.
 
 ## a) Resumo das execuções
 
 | Ambiente | Resultado | Total | Passaram | Falharam | Tempo |
 |---|---|---:|---:|---:|---:|
 | Local — Windows, Python 3.11.9, pytest 9.1.1, `.venv` | **PASSOU** (`./scripts/run_harness.sh`) | 246 | 246 | 0 | 3,05 s |
-| Docker local — `docker compose run --rm test` | **NÃO EXECUTADO NESTE AMBIENTE**; daemon Docker indisponível | — | — | — | — |
+| Docker local — Docker 29.8.0, Compose v5.5.1, Python 3.11.17 no contêiner (`docker compose run --rm test`), commit `49696c0` | **PASSOU** | 246 | 246 | 0 | 10,16 s |
 | CI — Ubuntu, Python 3.11.17, job pytest | **PASSOU** | 246 | 246 | 0 | 0,57 s |
 | CI — Ubuntu, job Docker | **PASSOU** | 246 | 246 | 0 | 0,78 s |
 
-O Docker local não chegou a iniciar a suíte: `docker compose run --rm test` terminou com código 1 porque não foi possível conectar ao engine `dockerDesktopLinuxEngine`. Portanto, não há total nem duração de testes locais para essa linha.
-
-**Comando para executar no ambiente do grupo:**
-
-```bash
-docker compose run --rm test
-```
+Na coleta de 14/10, o Docker local não chegou a iniciar a suíte: `docker compose run --rm test` terminou com código 1 porque o daemon do Docker Desktop estava desligado. A execução foi refeita em 15/10, com o Docker Desktop ativo, e terminou com código 0. Uma execução anterior no commit `6f9a079` também passou (246 em 7,20 s) e está registrada no [PR #121](https://github.com/mariisena/phishguard-bootcamp-iii/pull/121).
 
 ### Execuções locais consecutivas — RNF-02
 
@@ -111,14 +106,23 @@ tests/unit/test_url_shortener.py::test_encurtador_no_meio_do_host_nao_dispara PA
 ============================= 246 passed in 3.05s =============================
 ```
 
-### Docker local — não executado
+### Docker local — `docker compose run --rm test` (15/10, commit `49696c0`)
 
-Não houve saída de pytest neste ambiente, porque o comando falhou antes de iniciar o container. Final do erro capturado em [`docker_20261014.log`](../../logs/docker_20261014.log):
+Início e final da saída do contêiner:
 
 ```text
-failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
-Docker compose exit code: 1
+platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+rootdir: /app
+collecting ... collected 246 items
+...
+tests/unit/test_url_shortener.py::test_www_bit_ly_dispara PASSED         [ 99%]
+tests/unit/test_url_shortener.py::test_notbit_ly_nao_dispara PASSED      [ 99%]
+tests/unit/test_url_shortener.py::test_encurtador_no_meio_do_host_nao_dispara PASSED [100%]
+
+============================= 246 passed in 10.16s =============================
 ```
+
+O comando usa `--rm`, então o contêiner é removido ao final.
 
 ### CI — job `Test Harness (pytest)`
 
@@ -146,7 +150,8 @@ tests/unit/test_url_shortener.py::test_encurtador_no_meio_do_host_nao_dispara PA
 
 - A suíte local principal e ambas as repetições coletaram 246 testes; em cada uma, 246 passaram e 0 falharam.
 - Os jobs CI pytest e Docker também registram 246 passaram e 0 falharam.
+- A execução Docker local de 15/10 coletou 246 testes; 246 passaram e 0 falharam.
 - Para cada execução concluída, `passaram + falharam = total` (`246 + 0 = 246`).
-- A execução Docker local não coletou testes e, portanto, não entra na comparação de totais; ela permanece explicitamente marcada como não executada neste ambiente.
+- Os três ambientes exigidos (local, Docker e CI) têm 100% de aprovação.
 - Não foram identificados casos de borda do §7 sem teste correspondente.
 - O total `152` da evolução histórica não foi confirmado e permanece assinalado como não verificado.
