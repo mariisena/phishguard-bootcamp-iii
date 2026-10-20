@@ -4,7 +4,7 @@
 **Disciplina:** Bootcamp III — Turma B-0726
 **Entrega:** 1 — Ambiente, Especificação Técnica e Test Harness / 2 — Publicação, Refinamento e Análise Crítica
 **Metodologia:** Spec-Driven Development (SDD)
-**Versão do documento:** 1.3
+**Versão do documento:** 1.4
 **Última atualização:** ver seção 8 (Histórico de Versões)
 
 ---
@@ -46,7 +46,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | **RF-13** | O sistema deve identificar URLs anormalmente longas (mais de 75 caracteres). |
 | **RF-14** | O sistema deve identificar palavras-chave sensíveis no path ou query, de forma case-insensitive, e pontuá-las apenas quando ao menos outra heurística RF-05 a RF-13 tiver disparado. |
 | **RF-15** | O sistema deve checar allowlist e blocklist locais por correspondência exata do host canônico; allowlist e blocklist sobrepõem o resultado heurístico conforme as regras de negócio. |
-| **RF-16** | O sistema deve expor GET /health e retornar um JSON de disponibilidade. |
+| **RF-16** | O sistema deve expor GET /health e retornar um JSON de disponibilidade, conforme o contrato da seção 5.5. |
 | **RF-17** | Entradas ausentes, nulas, vazias, de tipo incorreto, fora do limite de tamanho ou URLs inválidas devem retornar HTTP 422 com mensagem descritiva, sem exceção não tratada. |
 
 ---
@@ -203,6 +203,26 @@ Para campo ausente, null, vazio, tipo incorreto ou tamanho fora de 1–2048 cara
 | N-08 | Path e query são preservados para análise, sendo criada uma visão em minúsculas exclusivamente para comparações case-insensitive. O fragmento não participa da pontuação. |
 | N-09 | Credenciais/userinfo válidas sintaticamente não invalidam automaticamente a URL; sua presença com @ é sinalizada por RF-06. |
 
+### 5.5. `GET /health` — Response 200
+
+Endpoint de disponibilidade (RF-16). Não recebe parâmetros, não aciona o motor de análise e não acessa dependências externas.
+
+```json
+{
+  "status": "ok",
+  "service": "phishguard",
+  "version": "3.0.0"
+}
+```
+
+| Campo | Tipo | Descrição |
+| ---- | --- | --- |
+| status | string | Sempre `ok` quando o serviço responde. |
+| service | string | Nome do serviço: `phishguard`. |
+| version | string | Versão da release publicada no GitHub, sem o prefixo `v` (tag `v3.0.0` → `3.0.0`). |
+
+A versão é definida em um único ponto, `APP_VERSION` em `analyzer/config.py`, e é a mesma exibida nos metadados OpenAPI (`/docs`). Toda nova release deve atualizar esse valor.
+
 ---
 
 ## 6. Decomposição em Componentes / Unidades
@@ -326,6 +346,10 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 
 ## 8. Refinamento por Feedback
 
+**Data**: 2026-10-20
+**Descrição**: O RF-16 passa a remeter ao novo §5.5, que documenta o contrato do `GET /health` (campos `status`, `service` e `version`). O campo `version` passa a informar a versão da release (`3.0.0`), definida em `APP_VERSION` no `analyzer/config.py`, em vez do valor fixo `1.0.0` que estava escrito em dois pontos do `api.py`.
+**Justificativa** (Issue #132): A preparação da Etapa Final mostrou que o contrato do `/health` existia apenas no código e que a versão informada (`1.0.0`) não correspondia às releases publicadas (`v2.0.0` a `v2.0.2`). A decisão de alinhar a versão à release final `v3.0.0` foi tomada por @mariisena em 2026-10-20.
+
 **Data**: 2026-10-13
 **Descrição**: Documentação da limitação conhecida da RN-05: a busca do nome da marca por substring pode sinalizar palavras legítimas, como `capitaurbana.com` (itau) e `caixadesom.com` (caixa). Testes adicionados para preservar esse comportamento especificado, sem alteração da heurística.
 **Justificativa** (PR #88): A limitação foi levantada durante a revisão do PR #88. Como a detecção por inclusão está dentro do escopo definido e typosquatting avançado está fora de escopo, a mudança registra os falsos positivos conhecidos e evita alteração acidental da regra.
@@ -368,3 +392,4 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 | v1.3 | 2026-10-11 | Revisão de consistência: endpoint do RF-01, remoção de `checked_at` do exemplo §5.2, localização das heurísticas, referências RN no §7. | Revisão pós-Entrega 1 | Mariana |
 | v1.3 | 2026-10-13 | Documentação da limitação da RN-05 para marcas contidas em palavras legítimas; testes fixam `capitaurbana.com` e `caixadesom.com`. | Refinamento por Feedback (PR #88) | Ana Clara |
 | v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara
+| v1.4 | 2026-10-20 | Contrato do `GET /health` no §5.5; `version` passa a ser a versão da release (`3.0.0`), centralizada em `APP_VERSION`. | Refinamento por Feedback (#132) | Mariana |

@@ -4,6 +4,9 @@ Mantidas centralizadas (RNF-04 / regra "sem valores mágicos espalhados") para q
 ajuste de regra de negócio seja feito em um único lugar e refletido nos testes.
 """
 
+# SDD §5.5: versão da release publicada (tag sem o prefixo "v"), exposta no /health e no OpenAPI.
+APP_VERSION = "3.0.0"
+
 # Pontuação de cada heurística (chave = código do motivo retornado pela heurística).
 # Chaves, valores e ordem seguem a Tabela 4.1 do SDD, que é a fonte normativa.
 POINTS = {
