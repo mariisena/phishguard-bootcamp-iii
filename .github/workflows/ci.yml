@@ -28,7 +28,7 @@ jobs:
 
       - name: Executa a suite de testes
         run: |
-          python -m pytest -v --junitxml=test-report.xml | tee logs_test_harness.txt
+          python -m pytest -v --junitxml=test-report.xml --cov-report=xml --cov-report=html | tee logs_test_harness.txt
 
       - name: Publica evidencias de execucao
         if: always()
@@ -38,6 +38,8 @@ jobs:
           path: |
             logs_test_harness.txt
             test-report.xml
+            coverage.xml
+            htmlcov/
           retention-days: 30
 
   docker-harness:

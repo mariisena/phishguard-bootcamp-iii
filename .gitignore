@@ -14,6 +14,7 @@ ENV/
 # Testes e cobertura
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 test-report.xml
 
