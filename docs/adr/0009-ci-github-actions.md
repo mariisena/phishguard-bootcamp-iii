@@ -58,7 +58,8 @@ em paralelo, então o custo de tempo é pequeno.
 ### Negativas / Trade-offs
 
 * **O CI informa, mas não bloqueia por si só.** Sem proteção de branch exigindo os checks e uma
-  aprovação, um PR vermelho ainda pode ser mergeado. Isso está pendente na issue #94.
+  aprovação, um PR vermelho ainda pode ser mergeado. Resolvido pelo ruleset da `main` e da
+  `develop` (ver "Evolução da decisão").
 * O job `docker-harness` testa o serviço `test` do compose, não o serviço da API. Uma quebra só no
   comando de subida da API (como o `phishguard.api:app` corrigido no PR #87) passou pelo CI.
 * Dependência de um serviço de terceiros: se o GitHub Actions estiver fora do ar, não há
@@ -69,6 +70,17 @@ em paralelo, então o custo de tempo é pequeno.
 
 ## Evolução da decisão
 
-Em ordem de prioridade: (1) proteção de `main` e `develop` exigindo os dois jobs e uma aprovação
+**Situação na release `v3.0.0` (2026-10-20):**
+
+* **(1) feito.** Um ruleset do repositório protege a `main` e a `develop`: exige PR com uma
+  aprovação, os checks `Test Harness (pytest)` e `Test Harness (Docker)` verdes e atualizados com a
+  branch de destino, e bloqueia force-push e exclusão da branch. Os nomes dos jobs no `ci.yml` não
+  podem mudar sem atualizar o ruleset.
+* O job `test-harness` passou a publicar também o relatório de cobertura (`coverage.xml` e
+  `htmlcov/`), gerado pelo `pytest-cov` configurado no `pytest.ini` (#131).
+* **(4) parcial.** Os PRs passam pelo check do GitGuardian (app do GitHub, fora do `ci.yml`).
+* (2), (3) e (5) continuam pendentes.
+
+Plano original, em ordem de prioridade: (1) proteção de `main` e `develop` exigindo os dois jobs e uma aprovação
 (#94); (2) um passo que suba a API e chame `GET /health`; (3) `black --check` e um linter que
 rejeite `except Exception: pass`; (4) varredura de segredos; (5) fixar versões das dependências.

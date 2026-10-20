@@ -15,7 +15,7 @@ ele é implementado.
 | [0006](0006-subdominios-sem-public-suffix-list.md) | Subdomínios sem Public Suffix List | Aceita | 2026-09-08 | Os dois últimos labels são o domínio-base; dispara com mais de 3 subdomínios. | Falso positivo em `.com.br`, `.gov.br`, `.co.uk`. |
 | [0007](0007-marca-por-inclusao-e-leet-speak.md) | Marca por inclusão + leet speak | Aceita | 2026-09-12 | Marca contida no host após mapa leet fixo, exceto domínio oficial. | Falsos positivos por coincidência (`capitaurbana.com` → `itau`, #91). |
 | [0008](0008-contrato-deterministico-sem-checked-at.md) | Contrato determinístico, sem `checked_at` | Aceita | 2026-09-08 | A resposta tem só os 5 campos do SDD §5.2; nada gerado no momento da requisição. | A resposta não informa quando a análise foi feita. |
-| [0009](0009-ci-github-actions.md) | CI com GitHub Actions | Aceita | 2026-09-10 | Dois jobs em todo push e PR: pytest com artefato de evidência e `docker compose run --rm test`. | Sem proteção de branch (#94) o CI informa, mas não bloqueia o merge. |
+| [0009](0009-ci-github-actions.md) | CI com GitHub Actions | Aceita | 2026-09-10 | Dois jobs em todo push e PR: pytest com artefato de evidência e `docker compose run --rm test`. | Depende do GitHub Actions; o bloqueio de merge vem do ruleset da `main`/`develop`, que exige os dois jobs. |
 
 As ADRs 0006 a 0009 foram escritas em 2026-10-12 (issue #102) para decisões que já estavam em
 vigor no SDD ou no repositório, mas sem registro próprio. A data da tabela é a da decisão; a data
