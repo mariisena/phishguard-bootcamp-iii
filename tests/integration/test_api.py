@@ -7,7 +7,7 @@ Estratégia de isolamento
 Por isso, *todos* os testes mockam ``analyzer.api.calculate_risk`` via
 ``unittest.mock.patch``, garantindo que apenas a camada HTTP seja exercida aqui.
 
-Cenários cobertos (SDD §5.2 – §5.3)
+Cenários cobertos (SDD §5.2 – §5.3, §5.5)
 -------------------------------------
     ✓ POST /api/v1/analyze – 200 com payload válido
     ✓ POST /api/v1/analyze – resposta contém exatamente os campos do contrato (sem ``checked_at``)
@@ -21,6 +21,7 @@ Cenários cobertos (SDD §5.2 – §5.3)
     ✓ POST /api/v1/analyze – corpo de todo 422 é ``{"detail": "<str>"}``
     ✓ POST /api/v1/analyze – HTTP 400 NUNCA é retornado
     ✓ GET  /health         – 200 com campos status, service e version
+    ✓ GET  /health         – corpo exato do §5.5, com version "3.0.0" igual à do OpenAPI
 """
 
 from __future__ import annotations
@@ -99,6 +100,18 @@ class TestHealth:
         assert "version" in body
         assert isinstance(body["version"], str)
         assert body["version"] != ""
+
+    def test_body_matches_contract(self):
+        # SDD §5.5: valores literais, para a suíte quebrar se a versão mudar sem a release.
+        assert client.get(_HEALTH).json() == {
+            "status": "ok",
+            "service": "phishguard",
+            "version": "3.0.0",
+        }
+
+    def test_openapi_version_matches_health(self):
+        # SDD §5.5: o /docs exibe a mesma versão do /health.
+        assert client.get("/openapi.json").json()["info"]["version"] == "3.0.0"
 
 
 # ---------------------------------------------------------------------------
