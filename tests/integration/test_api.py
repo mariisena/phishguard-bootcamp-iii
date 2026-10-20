@@ -113,6 +113,12 @@ class TestHealth:
         # SDD §5.5: o /docs exibe a mesma versão do /health.
         assert client.get("/openapi.json").json()["info"]["version"] == "3.0.0"
 
+    def test_package_version_matches_health(self):
+        # SDD §5.5: analyzer.__version__ não pode divergir da versão exposta.
+        import analyzer
+
+        assert analyzer.__version__ == "3.0.0"
+
 
 # ---------------------------------------------------------------------------
 # POST /api/v1/analyze – cenários de sucesso (200)
