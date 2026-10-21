@@ -1,4 +1,4 @@
-"""PhishGuard – camada HTTP (SDD §5.1, §5.2, §5.3).
+"""PhishGuard – camada HTTP (SDD §5.1, §5.2, §5.3, §5.5).
 
 Responsabilidades deste módulo:
   • Receber requisições HTTP.
@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from analyzer.config import APP_VERSION
 from analyzer.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
 from analyzer.scorer import calculate_risk
 from analyzer.url_normalizer import InvalidURLError
@@ -27,7 +28,7 @@ from analyzer.url_normalizer import InvalidURLError
 
 app = FastAPI(
     title="PhishGuard",
-    version="1.0.0",
+    version=APP_VERSION,
     description="Analisador de risco de phishing em tempo real.",
 )
 
@@ -105,6 +106,6 @@ async def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
 async def health() -> HealthResponse:
     """Probe de liveness para load-balancers e orquestradores.
 
-    Não acessa o engine nem dependências externas.
+    Não acessa o engine nem dependências externas (SDD §5.5).
     """
-    return HealthResponse(status="ok", service="phishguard", version="1.0.0")
+    return HealthResponse(status="ok", service="phishguard", version=APP_VERSION)

@@ -2,10 +2,11 @@
 
 **Projeto:** PhishGuard — Detector de URLs Suspeitas/Phishing
 **Disciplina:** Bootcamp III — Turma B-0726
-**Entrega:** 1 — Ambiente, Especificação Técnica e Test Harness / 2 — Publicação, Refinamento e Análise Crítica
+**Entrega:** 1 — Ambiente, Especificação Técnica e Test Harness / 2 — Publicação, Refinamento e Análise Crítica / 3 — Etapa Final
 **Metodologia:** Spec-Driven Development (SDD)
-**Versão do documento:** 1.3
-**Última atualização:** ver seção 8 (Histórico de Versões)
+**Status:** **As-Built** — reflete o código entregue na release `v3.0.0`
+**Versão do documento:** 3.0
+**Última atualização:** 2026-10-20 (ver seção 9, Histórico de Versões)
 
 ---
 
@@ -13,9 +14,11 @@
 
 Phishing é uma das formas mais comuns de fraude digital: um atacante cria ou distribui uma URL que imita um site legítimo (bancos, e-mail, redes sociais, serviços de pagamento) para induzir a vítima a fornecer credenciais, dados pessoais ou financeiros. Grande parte dessas URLs apresenta padrões estruturais reconhecíveis — mesmo sem consultar bases externas em tempo real — como uso de IP no lugar de domínio, presença do caractere `@`, domínios com aparência de marcas conhecidas, uso de encurtadores, excesso de subdomínios ou caracteres unicode que imitam letras latinas (homograph/punycode).
 
-O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma avaliação de risco (pontuação de 0 a 100 e uma classificação categórica), explicando quais sinais de risco foram identificados. O objetivo da Entrega 1 é especificar o problema, decompor a solução em unidades testáveis e entregar um *harness* de testes automatizado que valide as regras de negócio definidas abaixo — a implementação de referência incluída no repositório serve como prova de conceito para validar a especificação e os testes.
+O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma avaliação de risco (pontuação de 0 a 100 e uma classificação categórica), explicando quais sinais de risco foram identificados.
 
-### 1.1 Fora de escopo (nesta entrega)
+Na Entrega 1, este documento especificou o problema, decompôs a solução em unidades testáveis e definiu o *harness* de testes, com uma implementação de referência como prova de conceito. Nas Entregas 2 e 3 a especificação foi refinada a partir dos testes e das revisões do grupo (seção 8). **Esta versão é a As-Built:** requisitos, regras, contratos e componentes descritos aqui correspondem ao código da release `v3.0.0`, e cada regra é validada pelo Test Harness (seção 7).
+
+### 1.1 Fora de escopo (na versão 3.0.0)
 
 - Consulta a serviços externos de reputação de URL (Google Safe Browsing, VirusTotal etc.) — candidato a evolução futura (ver ADR-0002).
 - Persistência em banco de dados — o serviço é *stateless* nesta versão (ver ADR-0003).
@@ -46,7 +49,7 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | **RF-13** | O sistema deve identificar URLs anormalmente longas (mais de 75 caracteres). |
 | **RF-14** | O sistema deve identificar palavras-chave sensíveis no path ou query, de forma case-insensitive, e pontuá-las apenas quando ao menos outra heurística RF-05 a RF-13 tiver disparado. |
 | **RF-15** | O sistema deve checar allowlist e blocklist locais por correspondência exata do host canônico; allowlist e blocklist sobrepõem o resultado heurístico conforme as regras de negócio. |
-| **RF-16** | O sistema deve expor GET /health e retornar um JSON de disponibilidade. |
+| **RF-16** | O sistema deve expor GET /health e retornar um JSON de disponibilidade, conforme o contrato da seção 5.5. |
 | **RF-17** | Entradas ausentes, nulas, vazias, de tipo incorreto, fora do limite de tamanho ou URLs inválidas devem retornar HTTP 422 com mensagem descritiva, sem exceção não tratada. |
 
 ---
@@ -59,10 +62,10 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 | **RNF-02** | **Determinismo** | Para a mesma entrada e a mesma versão de configuração/listas, url, normalized_host, score, classification e reasons devem ser idênticos. A ordem de reasons também é determinística. |
 | **RNF-03** | **Testabilidade** | Cada heurística deve ser uma função pura testável isoladamente da camada HTTP e das demais heurísticas. |
 | **RNF-04** | **Extensibilidade** | Novas heurísticas devem poder ser adicionadas por meio da mesma interface de entrada/saída, sem alterar o contrato das heurísticas existentes. |
-| **RNF-05** | **Portabilidade** | O serviço deve executar de forma reproduzível por docker compose up, sem configuração manual específica do ambiente do desenvolvedor além de Docker/Compose. |
+| **RNF-05** | **Portabilidade** | O serviço deve executar de forma reproduzível por docker compose up, sem configuração manual específica do ambiente do desenvolvedor além de Docker/Compose. A suíte roda no mesmo ambiente por `docker compose run --rm test`. |
 | **RNF-06** | **Observabilidade mínima** | Toda execução da suíte deve gerar relatório ou log persistido em arquivo como evidência de execução. |
 | **RNF-07** | **Internacionalização de entrada** | O normalizador deve aceitar URLs contendo IDN/Unicode sem lançar exceção não tratada e deve produzir representação canônica determinística. |
-| **RNF-08** | **Stack tecnológica** | A aplicação deve ser desenvolvida em Python com FastAPI e schemas Pydantic, visando simplicidade, conteinerização e reprodutibilidade. |
+| **RNF-08** | **Stack tecnológica** | A aplicação deve ser desenvolvida em Python com FastAPI e schemas Pydantic, visando simplicidade, conteinerização e reprodutibilidade. Versão de referência: Python 3.11 (imagem `python:3.11-slim` e CI), conforme ADR-0001. |
 | **RNF-09** | **Contrato JSON** | Os corpos de request e response da API devem utilizar JSON. Respostas de erro previstas também devem ser serializadas em JSON. | 
 | **RNF-10** | **Modularidade** | O código deve separar claramente camada HTTP, modelos de contrato, normalização, heurísticas, listas locais e agregação/scoring. | 
 
@@ -125,6 +128,23 @@ O **PhishGuard** é um serviço (API HTTP) que recebe uma URL e retorna uma aval
 **Critério de Punycode/Unicode**: a heurística dispara se o host original possuir qualquer caractere não ASCII ou se a forma canônica IDNA contiver label iniciado por xn--. O normalizador deve preservar informação suficiente para essa checagem antes/depois da conversão IDNA.
 
 **Critério do caractere @**: a regra considera @ na seção de autoridade/userinfo, isto é, entre // e o início de path/query/fragmento. Um @ apenas no path/query não deve disparar RF-06.
+
+**Critério de TLD (RF-08)**: o TLD é o último label do host canônico (minúsculas, sem ponto final e em IDNA ASCII), comparado com a lista fechada acima sem o ponto inicial.
+
+**Critério de URL longa (RF-13)**: o comprimento considerado é o da entrada após o trim (o campo `url` da resposta), incluindo esquema, host, path, query e fragmento.
+
+**Critério de palavra-chave (RF-14)**: a busca é por **inclusão de substring** na visão em minúsculas do path e da query (N-08). Por isso `/blogin` contém `login` e `/updates` contém `update`. O fragmento não participa.
+
+**Critério de marca com mais de uma ocorrência (RF-10)**: se o host contiver mais de uma marca monitorada, apenas a primeira na ordem da tabela acima é reportada em `possivel_impersonacao_marca:<marca>`, pois a heurística dispara no máximo uma vez (RN-07). A comparação com o domínio oficial usa o host sem a substituição leet.
+
+## 4.3. Listas locais (allowlist e blocklist)
+
+As listas ficam em `data/allowlist.json` e `data/blocklist.json`, cada uma um array JSON de strings, versionadas no repositório (ADR-0003).
+
+- São carregadas uma única vez por processo, na primeira análise, e tratadas como imutáveis durante a execução. Alterar uma lista exige reiniciar o serviço.
+- Cada item é canonizado como o host (minúsculas, sem ponto final e sem `www.` inicial) antes da comparação exata (RF-15, N-07). Um subdomínio de um item **não** corresponde ao item.
+- Um arquivo **ausente** equivale a uma lista vazia.
+- Um arquivo com JSON inválido, que não seja um array ou que tenha item que não seja string é erro de configuração (`InvalidDomainListError`): a análise falha em vez de classificar a URL, para que uma lista corrompida nunca produza um resultado `segura` falso.
 
 ---
 
@@ -189,6 +209,15 @@ Entradas inválidas não retornam HTTP 400 nesta versão. O contrato é padroniz
 
 Para campo ausente, null, vazio, tipo incorreto ou tamanho fora de 1–2048 caracteres, a aplicação deve retornar HTTP 422 com detail descritivo. A implementação pode usar handler de exceção próprio para normalizar o formato do erro do Pydantic/FastAPI, desde que o contrato de status e mensagem permaneça testável.
 
+**Como foi implementado:** existem duas origens de 422, e as duas devolvem `{"detail": "<string>"}`:
+
+| Origem | Quando | Formato de `detail` | Exemplo |
+| --- | --- | --- | --- |
+| Validação do body (Pydantic) | campo ausente, tipo incorreto, tamanho fora de 1–2048 | `"<local>: <mensagem>"`; vários erros separados por `"; "` | `body -> url: Field required` |
+| `InvalidURLError` (normalizador) | URL que não passa nas regras N-01 a N-09 | mensagem iniciada por `URL inválida:` | `URL inválida: esquema 'ftp' não suportado.` |
+
+O texto das mensagens do Pydantic depende da versão da biblioteca. Por isso os testes verificam o status 422 e o formato `{"detail": "<string não vazia>"}`, e não o texto exato.
+
 ### 5.4. Regras de normalização da URL
 
 | ID | Regra |
@@ -196,12 +225,32 @@ Para campo ausente, null, vazio, tipo incorreto ou tamanho fora de 1–2048 cara
 | N-01 | A entrada deve ser uma string; espaços externos são removidos antes da validação. |
 | N-02 | Após trim, o comprimento deve estar entre 1 e 2048 caracteres. |
 | N-03 | O esquema é obrigatório e deve ser http ou https, comparado sem distinção de maiúsculas/minúsculas. |
-| N-04 | O host é obrigatório. A ausência de host gera InvalidURLError/HTTP 422. |
-| N-05 | O hostname é convertido para minúsculas, o ponto final absoluto é removido e a porta não faz parte de normalized_host. |
-| N-06 | Hosts IDN/Unicode são convertidos para IDNA ASCII para normalized_host. O host original deve permanecer disponível ao motor de heurísticas para RF-11. |
+| N-04 | O host é obrigatório. A ausência de host gera InvalidURLError/HTTP 422. Host com espaço em branco ou com label vazio (ex.: `a..b.com`) também é inválido. |
+| N-05 | O hostname é convertido para minúsculas, o ponto final absoluto é removido e a porta não faz parte de normalized_host. Uma porta malformada ou fora de 0–65535 invalida a URL. |
+| N-06 | Hosts IDN/Unicode são convertidos para IDNA ASCII para normalized_host. O host original deve permanecer disponível ao motor de heurísticas para RF-11. Se a conversão IDNA falhar, a URL é inválida. Hosts já ASCII não passam pela conversão. |
 | N-07 | O prefixo www. é removido somente para consultas à allowlist/blocklist. O normalized_host da resposta preserva www. caso ele faça parte do host de entrada. |
 | N-08 | Path e query são preservados para análise, sendo criada uma visão em minúsculas exclusivamente para comparações case-insensitive. O fragmento não participa da pontuação. |
 | N-09 | Credenciais/userinfo válidas sintaticamente não invalidam automaticamente a URL; sua presença com @ é sinalizada por RF-06. |
+
+### 5.5. `GET /health` — Response 200
+
+Endpoint de disponibilidade (RF-16). Não recebe parâmetros, não aciona o motor de análise e não acessa dependências externas.
+
+```json
+{
+  "status": "ok",
+  "service": "phishguard",
+  "version": "3.0.0"
+}
+```
+
+| Campo | Tipo | Descrição |
+| ---- | --- | --- |
+| status | string | Sempre `ok` quando o serviço responde. |
+| service | string | Nome do serviço: `phishguard`. |
+| version | string | Versão da release publicada no GitHub, sem o prefixo `v` (tag `v3.0.0` → `3.0.0`). |
+
+A versão é definida em um único ponto, `APP_VERSION` em `analyzer/config.py`, e é a mesma exibida nos metadados OpenAPI (`/docs`). Toda nova release deve atualizar esse valor.
 
 ---
 
@@ -213,63 +262,79 @@ GitHub Projects). Os módulos ficam no pacote `analyzer/`; as heurísticas ficam
 `analyzer/rules/`, um arquivo por regra:
 
 ```text
-┌──────────────┐ 
-│ HTTp Request │
-└──────┬───────┘
-       │
-       ▼
-  ┌──────────────┐     ┌──────────────────┐      ┌───────────────┐
-  │  api.py      │────▶│  scorer.py       │────▶│  models.py    │
-  │ (FastAPI,    │     │ (agrega heurísti-│      │ (contratos/   │
-  │  contrato    │     │  cas + blocklist │      │  schemas      │
-  │  HTTP)       │     │  + allowlist →   │      │  Pydantic)    │
-  └──────────────┘     │  score+classific.)      └───────────────┘
-                       └────────┬─────────┘
-                                ▼
-┌──────────────┐     ┌────────────────────┐
-│url_normalizer│     │  rules/*.py        │
-│.py (parse +  │◀───│  (uma função pura   │
-│ validação)   │     │  por regra de      │
-└──────────────┘     │  negócio RF-05..14)|
-                     └────────┬───────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │  blocklist.py    │
-                     │ (allowlist/      │
-                     │  blocklist locais)
-                     └──────────────────┘
+HTTP Request (JSON)
+        │
+        ▼
+┌──────────────────────┐  valida o body   ┌──────────────────────┐
+│ api.py               │─────────────────▶│ models.py            │
+│ rotas, handlers 422, │◀─────────────────│ AnalyzeRequest,      │
+│ /health              │  serializa       │ AnalyzeResponse,     │
+└──────────┬───────────┘                  │ HealthResponse       │
+           │ calculate_risk(url)          └──────────────────────┘
+           ▼
+┌──────────────────────┐  1. normalize()  ┌──────────────────────┐
+│ scorer.py            │─────────────────▶│ url_normalizer.py    │
+│ precedência e        │                  │ ParsedURL ou         │
+│ agregação            │                  │ InvalidURLError      │
+│ (RN-01 a RN-09)      │                  └──────────────────────┘
+│                      │  2. listas       ┌──────────────────────┐
+│                      │─────────────────▶│ blocklist.py         │
+│                      │                  │ data/allowlist.json, │
+│                      │                  │ data/blocklist.json  │
+│                      │                  └──────────────────────┘
+│                      │  3. check()      ┌──────────────────────┐
+│                      │─────────────────▶│ rules/*.py           │
+│                      │                  │ uma heurística por   │
+│                      │                  │ arquivo, devolve     │
+│                      │                  │ HeuristicResult      │
+└──────────┬───────────┘                  └──────────────────────┘
+           │ AnalysisResult
+           ▼
+HTTP Response (JSON)
 
+config.py: pesos, limiares, listas fechadas, limites e APP_VERSION,
+lidos por scorer.py, url_normalizer.py, rules/*.py e api.py.
 ```
+
+Uma URL inválida interrompe o fluxo no passo 1: a `InvalidURLError` sobe até o `api.py`, que responde HTTP 422 (RN-09). Se o host estiver na allowlist ou na blocklist, o passo 3 não é executado (RN-03, RN-04).
 
 | Componente | Responsabilidade única | Testável isoladamente? |
 | --- | --- | --- |
-| `models.py` | Schemas Pydantic de request/response e tipos compartilhados. | Via testes de contrato e validação de schema. |
-| `url_normalizer.py` | Validar e parsear a URL; produzir `ParsedURL` e InvalidURLError em entradas inválidas. | Sim — sem dependências externas. |
-| `rules/*.py` | Uma regra por módulo/função pura: (`ParsedURL`) -> `HeuristicResult`. | Sim, isoladamente. |
-| `scorer.py` | Orquestrar normalização, listas e heurísticas; aplicar RN-01 a RN-09; produzir `AnalysisResult`. | Sim, via *fakes*/*fixtures*. |
-| `blocklist.py` | Carregar `allowlist.json` e `blocklist.json` locais e checar host canônico. | Sim, com fixtures/listas de teste. |
-| `api.py` |Rotas FastAPI, tratamento de erros e serialização JSON. | Sim, via `TestClient`. |
-| `config.py` | Fonte normativa em código para POINTS, THRESHOLDS, listas fechadas e ordem das heurísticas, refletindo esta especificação. | Sim, por testes de consistência/configuração. |
+| `api.py` | Rotas FastAPI (`POST /api/v1/analyze`, `GET /health`), handlers que convertem erros de validação e `InvalidURLError` em HTTP 422, serialização JSON. Sem regra de phishing. | Sim, via `TestClient` com o scorer substituído por *mock*. |
+| `models.py` | Schemas Pydantic dos contratos HTTP: `AnalyzeRequest`, `AnalyzeResponse` e `HealthResponse`. | Via testes de contrato da API. |
+| `url_normalizer.py` | Único ponto de parsing de URL: aplica N-01 a N-09 e produz `ParsedURL` ou `InvalidURLError`. Também expõe `is_ip_host`, usado pela RF-05. | Sim, sem dependências externas. |
+| `rules/base.py` | Tipo `HeuristicResult` e os construtores `fired(reason)` e `not_triggered()`. | Coberto pelos testes das heurísticas. |
+| `rules/*.py` | Uma heurística por arquivo, função pura `check(ParsedURL) -> HeuristicResult`, RF-05 a RF-14. | Sim, isoladamente. |
+| `blocklist.py` | Carregar `data/allowlist.json` e `data/blocklist.json` (seção 4.3) e checar o host canônico. | Sim, com listas injetadas ou diretório temporário. |
+| `scorer.py` | Orquestrar normalização, listas e heurísticas; aplicar RN-01 a RN-09; produzir `AnalysisResult` (dataclass com os mesmos 5 campos do §5.2). Define a ordem das heurísticas em `STRUCTURAL_HEURISTICS`. | Sim, com `DomainLists` injetado. |
+| `config.py` | Fonte em código das constantes desta especificação: `POINTS`, `THRESHOLDS`, `SCORE_MIN`/`SCORE_MAX`, listas fechadas, `MAX_URL_LENGTH`, `MAX_SUBDOMAIN_LEVELS`, `MAX_INPUT_LENGTH` e `APP_VERSION`. | Sim, `test_config_consistency.py` compara as listas com este documento. |
 
 A decomposição permite trabalho paralelo por heurística em branches independentes, desde que todas respeitem a mesma interface e retornem um `HeuristicResult` padronizado.
 
+### 6.1. Interface comum das heurísticas
 
-### 6.1. Interface comum sugerida para heurísticas
+```python
+@dataclass(frozen=True)
+class HeuristicResult:
+    triggered: bool
+    reason: Optional[str] = None   # código da Tabela 4.1 quando triggered=True
 
+def check(parsed: ParsedURL) -> HeuristicResult: ...
 ```
-HeuristicResult:
-  triggered: bool
-  points: int
-  reason: str | None
 
-heuristic(parsed_url: ParsedURL) -> HeuristicResult
-```
+- A heurística **não** devolve pontos. O `scorer.py` obtém a pontuação em `config.POINTS[reason]`, o que mantém os pesos num lugar só.
+- Motivos parametrizados, como `possivel_impersonacao_marca:<marca>`, usam a parte anterior ao `:` como chave de pontuação. Um motivo sem entrada em `POINTS` gera erro em vez de valer zero.
+- A ordem de execução é a tupla `STRUCTURAL_HEURISTICS` do `scorer.py`, na ordem normativa do §4.1. A palavra-chave sensível fica fora da tupla e é avaliada por último, porque depende da RN-06.
 
-O scorer não deve depender de detalhes internos de cada heurística. A ordem de execução deve ser definida em uma coleção única e estável, permitindo extensibilidade e determinismo.
+### 6.2. Decisões arquiteturais
+
+As decisões que justificam esta arquitetura estão em `docs/adr/` (índice em `docs/adr/README.md`): ADR-0001 (Python 3.11 + FastAPI), ADR-0002 (heurísticas em vez de ML), ADR-0003 (serviço stateless, sem banco), ADR-0004 (Docker e Docker Compose), ADR-0005 (Claude Code como agente de IA), ADR-0006 (subdomínios sem Public Suffix List), ADR-0007 (marca por inclusão e leet speak), ADR-0008 (contrato determinístico, sem `checked_at`) e ADR-0009 (CI com GitHub Actions). Todas estão com status "Aceita" na versão 3.0.0.
 
 ---
 
-## 7. Casos de Teste Previstos / Test Harness
+## 7. Casos de Teste / Test Harness
+
+Todos os cenários e casos de borda abaixo têm teste automatizado na suíte entregue.
 
 **Cenários principais:** URL claramente segura (domínio em `allowlist` ou sem sinais de risco);
 URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL intermediária
@@ -291,10 +356,11 @@ URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL
 * Mesma URL testada duas vezes deve retornar exatamente o mesmo resultado (RNF-02).
 
 
-7.1. Organização sugerida da suíte
+### 7.1. Organização da suíte
 
-```bash
+Cada heurística tem o seu arquivo em `tests/unit/`, com casos positivo, negativo e de borda. Os testes de `tests/integration/` exercitam a API (`test_api.py`, com o scorer substituído por *mock*), o fluxo completo do scorer com as listas reais (`test_detector.py`) e o RNF-01 (`test_performance.py`).
 
+```text
 tests/
 ├── unit/
 │   ├── test_at_symbol.py
@@ -315,16 +381,34 @@ tests/
 │   ├── test_api.py
 │   ├── test_detector.py
 │   └── test_performance.py
-
 ```
 
-O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não há diretório `tests/evidence/`.
+> Os testes de desempenho devem usar tolerância adequada ao ambiente e não substituir os testes funcionais. O RNF-01 é validado pela média de várias análises (limite de 300 ms por URL), evitando flutuações excessivas em um único teste de CI.
 
-> Os testes de desempenho devem usar tolerância adequada ao ambiente e não substituir os testes funcionais. O requisito RNF-01 pode ser validado por benchmark dedicado ou medição agregada, evitando flutuações excessivas em um único teste de CI.
-> 
+### 7.2. Execução, cobertura e evidências
+
+O `pytest.ini` define `testpaths = tests` e ativa a cobertura em toda execução (`--cov=analyzer --cov-branch --cov-report=term-missing`, via `pytest-cov`). Não há percentual mínimo obrigatório.
+
+| Forma de execução | Comando | Evidência gerada |
+| --- | --- | --- |
+| Local | `./scripts/run_harness.sh` | Log em `logs/harness_<data>_<hora>.log` (não versionado) |
+| Ambiente padronizado | `docker compose run --rm test` | Saída no terminal |
+| CI, job `Test Harness (pytest)` | `python -m pytest` no GitHub Actions | Artefato `evidencias-test-harness`: `logs_test_harness.txt`, `test-report.xml` (JUnit), `coverage.xml` e `htmlcov/`, guardado por 30 dias |
+| CI, job `Test Harness (Docker)` | `docker compose run --rm test` | Log do job no GitHub Actions |
+
+Os dois jobs de CI rodam em todo push e PR para `main` e `develop`, e são checks obrigatórios do ruleset dessas branches, que também exige um PR com uma aprovação (ADR-0009). Os números de testes e de cobertura da release estão no relatório de testes da Etapa Final, em `docs/evidencias/`.
+
 ---
 
 ## 8. Refinamento por Feedback
+
+**Data**: 2026-10-20
+**Descrição**: Revisão As-Built para a release `v3.0.0`, sem alteração de regra de negócio, peso, limiar, lista ou contrato. O documento foi conferido seção por seção contra o código entregue e passou a registrar comportamentos que já existiam no código e nos testes mas não estavam descritos: critérios de TLD, URL longa, palavra-chave por substring e marca com mais de uma ocorrência (§4.2); carregamento e erros das listas locais (novo §4.3); as duas origens e formatos do HTTP 422 (§5.3); host com espaço ou label vazio, porta inválida e falha de IDNA (N-04 a N-06). Também foram corrigidos: o diagrama e a tabela de componentes do §6, que não refletiam as dependências reais (incluídos `rules/base.py`, `AnalysisResult` e `APP_VERSION`); o §6.1, que previa um campo `points` no `HeuristicResult` que nunca existiu (a pontuação é do `scorer.py`); a organização da suíte e a execução e evidências do harness (§7.1 e novo §7.2); e as referências às ADRs (novo §6.2).
+**Justificativa** (Issue #133): A Etapa Final exige uma especificação As-Built que reflita rigorosamente o que foi entregue. Como o SDD é a fonte da verdade, as divergências apenas documentais foram corrigidas aqui; nenhuma delas exigiu mudar código.
+
+**Data**: 2026-10-20
+**Descrição**: O RF-16 passa a remeter ao novo §5.5, que documenta o contrato do `GET /health` (campos `status`, `service` e `version`). O campo `version` passa a informar a versão da release (`3.0.0`), definida em `APP_VERSION` no `analyzer/config.py`, em vez do valor fixo `1.0.0` que estava escrito em dois pontos do `api.py`.
+**Justificativa** (Issue #132): A preparação da Etapa Final mostrou que o contrato do `/health` existia apenas no código e que a versão informada (`1.0.0`) não correspondia às releases publicadas (`v2.0.0` a `v2.0.2`). A decisão de alinhar a versão à release final `v3.0.0` foi tomada por @mariisena em 2026-10-20.
 
 **Data**: 2026-10-13
 **Descrição**: Documentação da limitação conhecida da RN-05: a busca do nome da marca por substring pode sinalizar palavras legítimas, como `capitaurbana.com` (itau) e `caixadesom.com` (caixa). Testes adicionados para preservar esse comportamento especificado, sem alteração da heurística.
@@ -345,6 +429,7 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 **Data**: 2026-09-15
 **Descrição**: O exemplo de response JSON na seção 5.2 usava o código de motivo `"palavra_chave_sensivel_no_path"`, inconsistente com o código normativo `"palavra_chave_sensivel_no_path_query"` definido na Tabela 4.1.
 **Justificativa** (Issue #60): A Tabela 4.1 é a referência normativa do sistema e o código já usa essa convenção. Tratava-se de uma inconsistência apenas na documentação; nenhum arquivo de código ou teste foi alterado.
+
 **Data**: 2026-09-12
 **Descrição**: A regra RN-05 foi atualizada para formalizar a aplicação de normalização leet speak básica (0→o, 1→l, 3→e, 4→a, 5→s, 7→t) antes da verificação de impersonação de marcas.
 **Justificativa**: A decisão do grupo (#59) confirmou que o teste normativo `test_exemplo_normativo_do_sdd` em `tests/test_scorer.py` já depende desse comportamento para atingir o score esperado no host `paypa1-secure.verify-account.top`. Alterar o código invalidaria a suíte de testes existente, então a documentação foi adaptada para espelhar a implementação.
@@ -367,4 +452,6 @@ O `scripts/run_harness.sh` mantém as evidências de execução em `logs/`; não
 | v1.2 | 2026-09-22 | Definição de escopo e conteúdo inicial das listas de allowlist e blocklist. | Refinamento por Feedback (#61) | Ana Clara |
 | v1.3 | 2026-10-11 | Revisão de consistência: endpoint do RF-01, remoção de `checked_at` do exemplo §5.2, localização das heurísticas, referências RN no §7. | Revisão pós-Entrega 1 | Mariana |
 | v1.3 | 2026-10-13 | Documentação da limitação da RN-05 para marcas contidas em palavras legítimas; testes fixam `capitaurbana.com` e `caixadesom.com`. | Refinamento por Feedback (PR #88) | Ana Clara |
-| v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara
+| v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara |
+| v1.4 | 2026-10-20 | Contrato do `GET /health` no §5.5; `version` passa a ser a versão da release (`3.0.0`), centralizada em `APP_VERSION`. | Refinamento por Feedback (#132) | Mariana |
+| v3.0 | 2026-10-20 | **Versão As-Built** da release `v3.0.0`: SDD conferido contra o código; comportamentos implementados e não descritos passam a constar (§4.2, §4.3, §5.3, §5.4); §6 (diagrama, componentes, interface, ADRs) e §7 (suíte, cobertura, evidências) refletem o entregue. A numeração do documento passa a acompanhar a release. | Etapa Final (#133) | Mariana |
