@@ -19,4 +19,5 @@ services:
     volumes:
       - .:/app
     
-    command: ["python", "-m", "pytest", "-v"]
+    # RNF-06: o harness grava o log em logs/ (volume montado no diretório do projeto)
+    command: ["bash", "scripts/run_harness.sh"]
