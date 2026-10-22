@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Scripts shell rodam no contêiner Linux (docker compose run --rm test): sempre LF
+*.sh text eol=lf

@@ -33,7 +33,7 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 ## 2. Requisitos Funcionais (RF)
 
 | ID | Requisito |
-|----|-----------|
+| ---- | ----------- |
 | **RF-01** | O sistema deve receber uma URL (string) via `POST /api/v1/analyze` e retornar uma pontuação de risco de 0 a 100. |
 | **RF-02** | O sistema deve classificar a URL em `segura` (0–29), `suspeita` (30–59) ou `perigosa` (60–100). |
 | **RF-03** | O sistema deve retornar uma lista ordenada de motivos que justifique a pontuação ou eventual sobreposição por lista local. |
@@ -42,7 +42,7 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 | **RF-06** | O sistema deve identificar uso do caractere @ na seção de autoridade/userinfo da URL, sinal associado à ocultação do host real. |
 | **RF-07** | O sistema deve identificar excesso de subdomínios conforme a regra operacional definida na seção 4.2. |
 | **RF-08** | O sistema deve identificar TLDs da lista fechada de TLDs suspeitos definida nesta especificação. |
-| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. A correspondência é por igualdade exata OU por sufixo com fronteira de ponto: o host dispara se `host == encurtador` ou se `host` termina em `"." + encurtador`. Assim, `www.bit.ly` e `m.bit.ly` disparam, mas `notbit.ly` (sem ponto de fronteira) e `bit.ly.evil.com` (encurtador no meio do host, não no final) não disparam. |
+| **RF-09** | O sistema deve identificar domínios pertencentes à lista fechada de encurtadores conhecidos. A correspondência é por igualdade exata OU por sufixo com fronteira de ponto: o host dispara se `host == encurtador` ou se `host` termina em `"." + encurtador`. Assim, ``www.`bit.ly` e `m.bit.ly` disparam, mas `notbit.ly` (sem ponto de fronteira) e `bit.ly.evil.com` (encurtador no meio do host, não no final) não disparam. |
 | **RF-10** | O sistema deve identificar possível impersonação de marcas monitoradas quando o host contiver o nome da marca, mas não pertencer ao domínio oficial cadastrado para essa marca. |
 | **RF-11** | O sistema deve identificar hosts em Punycode (xn--) ou hosts originalmente informados com caracteres não ASCII/Unicode. |
 | **RF-12** | O sistema deve identificar ausência de HTTPS quando o esquema da URL for http. |
@@ -57,7 +57,7 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 ## 3. Requisitos Não-Funcionais (RNF)
 
 | ID | Requisito | Descrição |
-|----|-----------|-----------|
+| ---- | ----------- | ----------- |
 | **RNF-01** | **Desempenho** | Cada análise deve ser concluída em até 300 ms em ambiente de desenvolvimento padrão, sem chamadas de rede a terceiros e com processamento predominantemente em memória. |
 | **RNF-02** | **Determinismo** | Para a mesma entrada e a mesma versão de configuração/listas, url, normalized_host, score, classification e reasons devem ser idênticos. A ordem de reasons também é determinística. |
 | **RNF-03** | **Testabilidade** | Cada heurística deve ser uma função pura testável isoladamente da camada HTTP e das demais heurísticas. |
@@ -66,9 +66,8 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 | **RNF-06** | **Observabilidade mínima** | Toda execução da suíte deve gerar relatório ou log persistido em arquivo como evidência de execução. |
 | **RNF-07** | **Internacionalização de entrada** | O normalizador deve aceitar URLs contendo IDN/Unicode sem lançar exceção não tratada e deve produzir representação canônica determinística. |
 | **RNF-08** | **Stack tecnológica** | A aplicação deve ser desenvolvida em Python com FastAPI e schemas Pydantic, visando simplicidade, conteinerização e reprodutibilidade. Versão de referência: Python 3.11 (imagem `python:3.11-slim` e CI), conforme ADR-0001. |
-| **RNF-09** | **Contrato JSON** | Os corpos de request e response da API devem utilizar JSON. Respostas de erro previstas também devem ser serializadas em JSON. | 
-| **RNF-10** | **Modularidade** | O código deve separar claramente camada HTTP, modelos de contrato, normalização, heurísticas, listas locais e agregação/scoring. | 
-
+| **RNF-09** | **Contrato JSON** | Os corpos de request e response da API devem utilizar JSON. Respostas de erro previstas também devem ser serializadas em JSON. |
+| **RNF-10** | **Modularidade** | O código deve separar claramente camada HTTP, modelos de contrato, normalização, heurísticas, listas locais e agregação/scoring. |
 
 ---
 
@@ -76,26 +75,26 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 
 1. **RN-01 — Pontuação cumulativa e limitada:** Cada heurística disparada soma seus pontos uma única vez. O score heurístico final é limitado ao intervalo [0, 100] por clamp.
 2. **RN-02 — Classificação por faixa:** Score de 0 a 29 resulta em segura; 30 a 59 em suspeita; 60 a 100 em perigosa. As faixas são constantes centralizadas e não devem ser repetidas de forma hardcoded.
-3.	**RN-03 — Allowlist tem prioridade absoluta:** Se o host canônico, sem prefixo www., corresponder exatamente a um item da allowlist, o resultado final deve ser score 0, classification segura e reasons = ["dominio_allowlist"]. A allowlist é avaliada antes da blocklist.
-4.	**RN-04 — Blocklist força classificação perigosa:** Se o host canônico, sem prefixo www., corresponder exatamente a um item da blocklist e não houver correspondência na allowlist, o resultado final deve ser score 100, classification perigosa e reasons = ["dominio_blocklist"].
-5.	**RN-05 — Impersonação de marca exige ausência de domínio oficial:** A heurística dispara quando o host contém, de forma case-insensitive, o nome de uma marca monitorada e o host não é o domínio oficial nem um subdomínio desse domínio oficial. Antes da comparação, é aplicada uma normalização leet speak básica (0→o, 1→l, 3→e, 4→a, 5→s, 7→t). A heurística representa impersonação por inclusão de marca; typosquatting ortográfico genérico (troca de letras distintas, letras duplicadas, etc.) permanece fora de escopo, sendo coberta apenas essa substituição específica de caracteres leet.
-6.	**RN-06 — Palavra-chave sensível exige outro sinal:** A presença de palavra-chave sensível no path/query só adiciona pontos se ao menos uma heurística RF-05 a RF-13 também tiver disparado. Múltiplas palavras ou ocorrências não acumulam pontos adicionais.
-7.	**RN-07 — Uma heurística dispara no máximo uma vez:** Cada categoria de heurística soma pontos no máximo uma vez por análise, ainda que o padrão apareça repetidamente.
-8.	**RN-08 — Encurtadores são sinalizados, não bloqueados:** Host de encurtador conhecido adiciona pontuação e o motivo encurtador_conhecido_destino_nao_verificado. O serviço não segue o redirecionamento nesta entrega.
-9.	**RN-09 — Entrada inválida não recebe classificação:** Se a entrada não puder ser validada/normalizada, a API retorna HTTP 422 e não produz score, classification ou reasons de análise.
+3. **RN-03 — Allowlist tem prioridade absoluta:** Se o host canônico, sem prefixo ``www.``, corresponder exatamente a um item da allowlist, o resultado final deve ser score 0, classification segura e reasons = ["dominio_allowlist"]. A allowlist é avaliada antes da blocklist.
+4. **RN-04 — Blocklist força classificação perigosa:** Se o host canônico, sem prefixo ``www.``, corresponder exatamente a um item da blocklist e não houver correspondência na allowlist, o resultado final deve ser score 100, classification perigosa e reasons = ["dominio_blocklist"].
+5. **RN-05 — Impersonação de marca exige ausência de domínio oficial:** A heurística dispara quando o host contém, de forma case-insensitive, o nome de uma marca monitorada e o host não é o domínio oficial nem um subdomínio desse domínio oficial. Antes da comparação, é aplicada uma normalização leet speak básica (0→o, 1→l, 3→e, 4→a, 5→s, 7→t). A heurística representa impersonação por inclusão de marca; typosquatting ortográfico genérico (troca de letras distintas, letras duplicadas, etc.) permanece fora de escopo, sendo coberta apenas essa substituição específica de caracteres leet.
+6. **RN-06 — Palavra-chave sensível exige outro sinal:** A presença de palavra-chave sensível no path/query só adiciona pontos se ao menos uma heurística RF-05 a RF-13 também tiver disparado. Múltiplas palavras ou ocorrências não acumulam pontos adicionais.
+7. **RN-07 — Uma heurística dispara no máximo uma vez:** Cada categoria de heurística soma pontos no máximo uma vez por análise, ainda que o padrão apareça repetidamente.
+8. **RN-08 — Encurtadores são sinalizados, não bloqueados:** Host de encurtador conhecido adiciona pontuação e o motivo encurtador_conhecido_destino_nao_verificado. O serviço não segue o redirecionamento nesta entrega.
+9. **RN-09 — Entrada inválida não recebe classificação:** Se a entrada não puder ser validada/normalizada, a API retorna HTTP 422 e não produz score, classification ou reasons de análise.
 
 > Nota: A allowlist e a blocklist não devem conter o mesmo host. O Test Harness deve incluir um teste de consistência de configuração para detectar interseção entre as duas listas. Caso exista interseção por erro de configuração, RN-03 ainda prevalece por definição.
 
 ## 4.1. Pontuação normativa e códigos de motivo
 
-| Heurística	| Pontos | reason |
-|-------------|:------:|--------|
+| Heurística | Pontos | reason |
+| ------------- | :------: | -------- |
 | Host é IPv4/IPv6 | 25 | host_ip |
 | Uso de @ na autoridade/userinfo | 25 | uso_arroba_userinfo |
-| Excesso de subdomínios | 15	| subdominios_excessivos |
+| Excesso de subdomínios | 15 | subdominios_excessivos |
 | TLD suspeito | 15 | tld_suspeito |
 | Encurtador conhecido | 15 | encurtador_conhecido_destino_nao_verificado |
-| Possível impersonação de marca	| 25 | possivel_impersonacao_marca:<marca> |
+| Possível impersonação de marca | 25 | `possivel_impersonacao_marca:<marca>` |
 | Punycode ou host Unicode | 25 | punycode_ou_unicode_suspeito |
 | Sem HTTPS | 10 | sem_https |
 | URL com mais de 75 caracteres | 10 | url_muito_longa |
@@ -133,7 +132,7 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 
 **Critério de URL longa (RF-13)**: o comprimento considerado é o da entrada após o trim (o campo `url` da resposta), incluindo esquema, host, path, query e fragmento.
 
-**Critério de palavra-chave (RF-14)**: a busca é por **inclusão de substring** na visão em minúsculas do path e da query (N-08). Por isso `/blogin` contém `login` e `/updates` contém `update`. O fragmento não participa.
+**Critério de palavra-chave (RF-14)**: a busca é por **inclusão de substring** na visão em minúsculas do path e da query (N-08). Por isso `/blogin` contém `login` e `/updates` contém `update`. O fragmento não participa. Esse critério foi mantido por decisão do grupo (Issue #133): o falso positivo da substring é contido pela RN-06, já que a palavra-chave sozinha não pontua.
 
 **Critério de marca com mais de uma ocorrência (RF-10)**: se o host contiver mais de uma marca monitorada, apenas a primeira na ordem da tabela acima é reportada em `possivel_impersonacao_marca:<marca>`, pois a heurística dispara no máximo uma vez (RN-07). A comparação com o domínio oficial usa o host sem a substituição leet.
 
@@ -142,8 +141,8 @@ Na Entrega 1, este documento especificou o problema, decompôs a solução em un
 As listas ficam em `data/allowlist.json` e `data/blocklist.json`, cada uma um array JSON de strings, versionadas no repositório (ADR-0003).
 
 - São carregadas uma única vez por processo, na primeira análise, e tratadas como imutáveis durante a execução. Alterar uma lista exige reiniciar o serviço.
-- Cada item é canonizado como o host (minúsculas, sem ponto final e sem `www.` inicial) antes da comparação exata (RF-15, N-07). Um subdomínio de um item **não** corresponde ao item.
-- Um arquivo **ausente** equivale a uma lista vazia.
+- Cada item é canonizado como o host (minúsculas, sem ponto final e sem ``www.`` inicial) antes da comparação exata (RF-15, N-07). Um subdomínio de um item **não** corresponde ao item.
+- Um arquivo **ausente** equivale a uma lista vazia, e o carregamento emite um aviso (`WARNING`, logger `analyzer.blocklist`) com o nome do arquivo, para que a falta de uma lista não passe despercebida. A análise continua normalmente.
 - Um arquivo com JSON inválido, que não seja um array ou que tenha item que não seja string é erro de configuração (`InvalidDomainListError`): a análise falha em vez de classificar a URL, para que uma lista corrompida nunca produza um resultado `segura` falso.
 
 ---
@@ -228,7 +227,7 @@ O texto das mensagens do Pydantic depende da versão da biblioteca. Por isso os 
 | N-04 | O host é obrigatório. A ausência de host gera InvalidURLError/HTTP 422. Host com espaço em branco ou com label vazio (ex.: `a..b.com`) também é inválido. |
 | N-05 | O hostname é convertido para minúsculas, o ponto final absoluto é removido e a porta não faz parte de normalized_host. Uma porta malformada ou fora de 0–65535 invalida a URL. |
 | N-06 | Hosts IDN/Unicode são convertidos para IDNA ASCII para normalized_host. O host original deve permanecer disponível ao motor de heurísticas para RF-11. Se a conversão IDNA falhar, a URL é inválida. Hosts já ASCII não passam pela conversão. |
-| N-07 | O prefixo www. é removido somente para consultas à allowlist/blocklist. O normalized_host da resposta preserva www. caso ele faça parte do host de entrada. |
+| N-07 | O prefixo `www.` é removido somente para consultas à allowlist/blocklist. O normalized_host da resposta preserva `www.` caso ele faça parte do host de entrada. |
 | N-08 | Path e query são preservados para análise, sendo criada uma visão em minúsculas exclusivamente para comparações case-insensitive. O fragmento não participa da pontuação. |
 | N-09 | Credenciais/userinfo válidas sintaticamente não invalidam automaticamente a URL; sua presença com @ é sinalizada por RF-06. |
 
@@ -342,19 +341,20 @@ URL claramente perigosa (múltiplas heurísticas + domínio em `blocklist`); URL
 
 **Casos de borda (edge cases):**
 
-* URL vazia, `None` ou tipo incorreto;
-* URL sem esquema (`www.exemplo.com`);
-* Host como IPv4 (`http://192.168.0.1/login`) e IPv6;
-* URL com `@` (`http://usuario@dominio-falso.com@dominio-real.com`);
-* Domínio Punycode (`http://xn--pple-43d.com`);
-* Domínio com homoglifo unicode (`http://аpple.com` — "а" cirílico);
-* URL de encurtador conhecido;
-* URL com mais de 2048 caracteres;
-* Domínio com muitos subdomínios (`a.b.c.d.e.exemplo.com`);
-* Domínio oficial de marca monitorada (não deve disparar impersonação — RN-05);
-* URL com palavra sensível mas sem nenhum outro sinal (não deve subir de faixa — RN-06);
-* Mesma URL testada duas vezes deve retornar exatamente o mesmo resultado (RNF-02).
+- URL vazia, `None` ou tipo incorreto;
+- URL sem esquema (``www.`exemplo.com`);
+- Host como IPv4 (`http://192.168.0.1/login`) e IPv6;
+- URL com `@` (`http://usuario@dominio-falso.com@dominio-real.com`);
+- Domínio Punycode (`http://xn--pple-43d.com`);
+- Domínio com homoglifo unicode (`http://аpple.com` — "а" cirílico);
+- URL de encurtador conhecido;
+- URL com mais de 2048 caracteres;
+- Domínio com muitos subdomínios (`a.b.c.d.e.exemplo.com`);
+- Domínio oficial de marca monitorada (não deve disparar impersonação — RN-05);
+- URL com palavra sensível mas sem nenhum outro sinal (não deve subir de faixa — RN-06);
+- Mesma URL testada duas vezes deve retornar exatamente o mesmo resultado (RNF-02).
 
+---
 
 ### 7.1. Organização da suíte
 
@@ -392,15 +392,19 @@ O `pytest.ini` define `testpaths = tests` e ativa a cobertura em toda execução
 | Forma de execução | Comando | Evidência gerada |
 | --- | --- | --- |
 | Local | `./scripts/run_harness.sh` | Log em `logs/harness_<data>_<hora>.log` (não versionado) |
-| Ambiente padronizado | `docker compose run --rm test` | Saída no terminal |
+| Ambiente padronizado | `docker compose run --rm test` (o serviço `test` executa o `scripts/run_harness.sh`) | Log em `logs/harness_<data>_<hora>.log` no diretório do projeto, pelo volume montado (não versionado) |
 | CI, job `Test Harness (pytest)` | `python -m pytest` no GitHub Actions | Artefato `evidencias-test-harness`: `logs_test_harness.txt`, `test-report.xml` (JUnit), `coverage.xml` e `htmlcov/`, guardado por 30 dias |
-| CI, job `Test Harness (Docker)` | `docker compose run --rm test` | Log do job no GitHub Actions |
+| CI, job `Test Harness (Docker)` | `docker compose run --rm test` | Log do job no GitHub Actions (o arquivo em `logs/` fica no runner e não é publicado) |
 
 Os dois jobs de CI rodam em todo push e PR para `main` e `develop`, e são checks obrigatórios do ruleset dessas branches, que também exige um PR com uma aprovação (ADR-0009). Os números de testes e de cobertura da release estão no relatório de testes da Etapa Final, em `docs/evidencias/`.
 
 ---
 
 ## 8. Refinamento por Feedback
+
+**Data**: 2026-10-22
+**Descrição**: Decisões sobre os três pontos deixados em aberto pela revisão As-Built: (1) o serviço `test` do `docker-compose.yml` passa a executar o `scripts/run_harness.sh`, de modo que `docker compose run --rm test` também grava o log em `logs/` e cumpre o RNF-06 (§7.2); (2) arquivo de lista local ausente continua equivalendo a lista vazia, mas passa a emitir um aviso no log (§4.3); (3) a busca de palavra-chave por substring e a exigência de outro sinal da RN-06 são mantidas sem alteração (§4.2). Nenhum peso, limiar, lista ou contrato HTTP foi alterado.
+**Justificativa** (Issue #133): O RNF-06 exige log persistido em toda execução da suíte, o que o comando Docker não cumpria. Uma lista ausente sem aviso podia desativar o bloqueio silenciosamente. Quanto ao ponto 3, foi sugerido pontuar a palavra-chave sozinha; o grupo optou por manter a RN-06, porque a substring gera falsos positivos (`/blogin`, `/updates`) que só são contidos pela exigência de outro sinal. Respostas de @anaacllara na issue e decisão final de @mariisena em 2026-10-22.
 
 **Data**: 2026-10-20
 **Descrição**: Revisão As-Built para a release `v3.0.0`, sem alteração de regra de negócio, peso, limiar, lista ou contrato. O documento foi conferido seção por seção contra o código entregue e passou a registrar comportamentos que já existiam no código e nos testes mas não estavam descritos: critérios de TLD, URL longa, palavra-chave por substring e marca com mais de uma ocorrência (§4.2); carregamento e erros das listas locais (novo §4.3); as duas origens e formatos do HTTP 422 (§5.3); host com espaço ou label vazio, porta inválida e falha de IDNA (N-04 a N-06). Também foram corrigidos: o diagrama e a tabela de componentes do §6, que não refletiam as dependências reais (incluídos `rules/base.py`, `AnalysisResult` e `APP_VERSION`); o §6.1, que previa um campo `points` no `HeuristicResult` que nunca existiu (a pontuação é do `scorer.py`); a organização da suíte e a execução e evidências do harness (§7.1 e novo §7.2); e as referências às ADRs (novo §6.2).
@@ -419,8 +423,8 @@ Os dois jobs de CI rodam em todo push e PR para `main` e `develop`, e são check
 **Justificativa**: Alinhar a estrutura do repositório ao §7.1 do SDD após a divergência deixada pela issue #66, encerrada como concluída sem a reorganização correspondente.
 
 **Data**: 2026-10-13
-**Descrição**: O RF-09 passou a adotar correspondência por sufixo com fronteira de ponto, além da igualdade exata já existente. O host dispara se for igual ao encurtador ou se terminar em `"." + encurtador`. Exemplos: `www.bit.ly` e `m.bit.ly` passam a disparar; `notbit.ly` (sem fronteira) e `bit.ly.evil.com` (encurtador no meio) continuam não disparando.
-**Justificativa** (Issue #90 / PR #88): A correspondência puramente exata permitia que `www.bit.ly` escapasse da heurística, pois o N-07 remove o `www.` apenas nas consultas à allowlist/blocklist, e não nas heurísticas. O grupo decidiu pela opção B: cobrir subdomínios de encurtadores conhecidos, evitando que o usuário comum que copia ou digita links com `www.` contorne a detecção.
+**Descrição**: O RF-09 passou a adotar correspondência por sufixo com fronteira de ponto, além da igualdade exata já existente. O host dispara se for igual ao encurtador ou se terminar em `"." + encurtador`. Exemplos: ``www.`bit.ly` e `m.bit.ly` passam a disparar; `notbit.ly` (sem fronteira) e `bit.ly.evil.com` (encurtador no meio) continuam não disparando.
+**Justificativa** (Issue #90 / PR #88): A correspondência puramente exata permitia que``www.`bit.ly` escapasse da heurística, pois o N-07 remove o ``www.`` apenas nas consultas à allowlist/blocklist, e não nas heurísticas. O grupo decidiu pela opção B: cobrir subdomínios de encurtadores conhecidos, evitando que o usuário comum que copia ou digita links com ``www.`` contorne a detecção.
 
 **Data**: 2026-10-11
 **Descrição**: Revisão de consistência pós-Entrega 1, sem alteração de regra de negócio, peso, limiar ou lista: (a) RF-01 passa a citar o endpoint correto `POST /api/v1/analyze`; (b) o campo `checked_at` foi retirado do exemplo de response do §5.2, alinhando o exemplo à nota do próprio §5.2 que já o removera do contrato por causa do RNF-02; (c) as URLs dos exemplos JSON dos §5.1/§5.2 deixam de conter sintaxe de link Markdown dentro da string; (d) o §6 passa a refletir a localização real das heurísticas (`analyzer/rules/`); (e) o §7 corrige referências de regra (impersonação → RN-05, palavra-chave → RN-06); (f) remoção de itens duplicados no §1.1.
@@ -435,7 +439,7 @@ Os dois jobs de CI rodam em todo push e PR para `main` e `develop`, e são check
 **Justificativa**: A decisão do grupo (#59) confirmou que o teste normativo `test_exemplo_normativo_do_sdd` em `tests/test_scorer.py` já depende desse comportamento para atingir o score esperado no host `paypa1-secure.verify-account.top`. Alterar o código invalidaria a suíte de testes existente, então a documentação foi adaptada para espelhar a implementação.
 
 **Data**: 2026-09-12
-**Descrição**: As listas fechadas da seção 4.2 (SUSPICIOUS_TLDS, URL_SHORTENERS, MONITORED_BRANDS) foram ampliadas para espelhar as configurações já existentes e validadas em `analyzer/config.py`. 
+**Descrição**: As listas fechadas da seção 4.2 (SUSPICIOUS_TLDS, URL_SHORTENERS, MONITORED_BRANDS) foram ampliadas para espelhar as configurações já existentes e validadas em `analyzer/config.py`.
 **Justificativa**: A decisão do grupo (#58) definiu que reduzir o código descartaria configurações já validadas e poderia quebrar implementações futuras. Optou-se por ampliar o SDD para ser compatível com o código e inserir um teste de consistência automatizado para garantir que ambos permaneçam em sincronia (onde o SDD é ajustado ao config de forma documentada neste refinamento).
 
 ---
@@ -455,3 +459,4 @@ Os dois jobs de CI rodam em todo push e PR para `main` e `develop`, e são check
 | v1.3 | 2026-10-13 | Estende a verificação de subdomínios de encurtadores para RF-09 | Atualização após discussão em grupo | Ana Clara |
 | v1.4 | 2026-10-20 | Contrato do `GET /health` no §5.5; `version` passa a ser a versão da release (`3.0.0`), centralizada em `APP_VERSION`. | Refinamento por Feedback (#132) | Mariana |
 | v3.0 | 2026-10-20 | **Versão As-Built** da release `v3.0.0`: SDD conferido contra o código; comportamentos implementados e não descritos passam a constar (§4.2, §4.3, §5.3, §5.4); §6 (diagrama, componentes, interface, ADRs) e §7 (suíte, cobertura, evidências) refletem o entregue. A numeração do documento passa a acompanhar a release. | Etapa Final (#133) | Mariana |
+| v3.0 | 2026-10-22 | Decisões da revisão As-Built: `docker compose run --rm test` grava log em `logs/` (§7.2); lista local ausente emite aviso (§4.3); RF-14 por substring e RN-06 mantidos (§4.2). | Refinamento por Feedback (#133) | Mariana |

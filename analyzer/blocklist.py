@@ -10,6 +10,7 @@ As consultas usam **correspondência exata** do host canônico sem o prefixo `ww
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -18,6 +19,8 @@ from typing import List, Optional
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 _WWW_PREFIX = "www."
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidDomainListError(ValueError):
@@ -43,8 +46,9 @@ def canonical_for_lookup(host: str) -> str:
 
 
 def _load_json_list(path: Path) -> List[str]:
-    """Lê um arquivo de lista. Arquivo ausente equivale a lista vazia."""
+    """Lê um arquivo de lista. Arquivo ausente equivale a lista vazia, com aviso (SDD §4.3)."""
     if not path.exists():
+        logger.warning("%s não encontrado em %s; usando lista vazia.", path.name, path.parent)
         return []
 
     with path.open("r", encoding="utf-8") as fh:

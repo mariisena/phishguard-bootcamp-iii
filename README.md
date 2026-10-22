@@ -2,7 +2,7 @@
 
 > Serviço HTTP para análise local e determinística de URLs suspeitas e de phishing.
 
-**Bootcamp III — Turma B-0726 | Entrega 2**
+**Bootcamp III — Turma B-0726 | Entrega 3**
 
 [![CI](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml/badge.svg)](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml)
 
@@ -73,6 +73,15 @@ normativa e as regras de negócio; alterações de comportamento devem partir do
 - Docker Engine com o comando `docker compose`, para a execução conteinerizada; ou
 - Python 3.11 e `pip`, para a execução local.
 
+### Variáveis de ambiente
+
+A aplicação não precisa de variáveis de ambiente: não é necessário criar um arquivo `.env`,
+configurar chaves ou conectar serviços externos. O projeto usa regras locais, sem serviços externos
+([ADR-0002](docs/adr/0002-heuristicas-vs-ml.md)), e é stateless, sem banco de dados
+([ADR-0003](docs/adr/0003-stateless-sem-banco.md)). No `docker-compose.yml`, o serviço `api` define
+somente `PYTHONUNBUFFERED=1`, para que a saída do Python não seja armazenada em buffer; o serviço
+`test` não define variáveis de ambiente.
+
 ### Docker
 
 Na raiz do repositório, construa a imagem e suba a API:
@@ -84,7 +93,8 @@ docker compose up --build
 A porta `8000` do host é mapeada para a porta `8000` do container. A API estará em
 `http://localhost:8000`, e o Swagger UI em `http://localhost:8000/docs`.
 
-Em outro terminal, execute a suíte no serviço `test`:
+Em outro terminal, execute a suíte no serviço `test`. O `pytest.ini` configura a cobertura de
+branches e imprime no terminal o relatório com linhas não cobertas:
 
 ```bash
 docker compose run --rm test
@@ -93,7 +103,9 @@ docker compose run --rm test
 O serviço `api` inicia `analyzer.api:app`; o serviço `test` executa `python -m pytest -v`, conforme
 o [docker-compose.yml](docker-compose.yml).
 
-### Ambiente local (Windows PowerShell)
+### Ambiente local
+
+#### Windows (PowerShell)
 
 Clone o repositório oficial:
 
@@ -118,26 +130,57 @@ python -m pip install -r requirements.txt
 Suba a API:
 
 ```bash
-python -m uvicorn analyzer.api:app --reload
+uvicorn analyzer.api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 A API fica disponível em `http://localhost:8000`. Abra
 [`http://localhost:8000/docs`](http://localhost:8000/docs) para acessar o Swagger UI.
 
-### Testes
+#### Linux/macOS
 
-Em Linux/macOS, execute o harness a partir da raiz do repositório com Bash:
+Na raiz do repositório, crie e ative o ambiente virtual com Python 3.11:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+```
+
+Instale as dependências:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Suba a API:
+
+```bash
+uvicorn analyzer.api:app --reload --host 127.0.0.1 --port 8000
+```
+
+A API fica disponível em `http://localhost:8000`. Abra
+[`http://localhost:8000/docs`](http://localhost:8000/docs) para acessar o Swagger UI.
+
+### Testes locais
+
+Em Linux/macOS, com o ambiente virtual ativado, execute o harness a partir da raiz do repositório
+com Bash:
 
 ```bash
 ./scripts/run_harness.sh
 ```
 
-O script executa `pytest -v` e grava o log em `logs/`. Para executar a suíte diretamente, inclusive
-no PowerShell:
+O script executa `pytest -v` e grava o log em `logs/`. O `pytest.ini` habilita cobertura de branches
+e imprime no terminal o relatório com linhas não cobertas.
 
-```bash
-python -m pytest -v
-```
+### Cobertura
+
+Ao executar os testes, consulte no terminal a tabela de cobertura por arquivo: a coluna `Stmts`
+mostra as instruções, `Miss` as não executadas e `Cover` a porcentagem coberta. A coluna `Missing`
+indica as linhas que ainda não foram cobertas.
+
+Na CI, abra uma execução do workflow [**CI** no GitHub Actions](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml)
+e baixe o artefato `evidencias-test-harness`. Após descompactá-lo, abra
+`htmlcov/index.html` para consultar o relatório navegável. O artefato fica disponível por 30 dias.
 
 ### Endpoints
 
@@ -145,15 +188,31 @@ python -m pytest -v
 - `GET /health` — retorna o estado de disponibilidade.
 - `GET /docs` — documentação interativa Swagger UI.
 
-Exemplo de chamada:
+Os exemplos abaixo foram executados contra a API local em `http://localhost:8000`.
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"url": "http://192.168.0.1/login"}'
+curl -sS -X POST http://localhost:8000/api/v1/analyze -H 'Content-Type: application/json' -d '{"url":"https://google.com"}'
 ```
 
-Resposta real da API para esse exemplo:
+Resposta real — classificação `segura`:
+
+```json
+{
+  "url": "https://google.com",
+  "normalized_host": "google.com",
+  "score": 0,
+  "classification": "segura",
+  "reasons": [
+    "dominio_allowlist"
+  ]
+}
+```
+
+```bash
+curl -sS -X POST http://localhost:8000/api/v1/analyze -H 'Content-Type: application/json' -d '{"url":"http://192.168.0.1/login"}'
+```
+
+Resposta real — classificação `suspeita`:
 
 ```json
 {
@@ -169,6 +228,27 @@ Resposta real da API para esse exemplo:
 }
 ```
 
+```bash
+curl -sS -X POST http://localhost:8000/api/v1/analyze -H 'Content-Type: application/json' -d '{"url":"http://phishing-banco-teste.com"}'
+```
+
+Resposta real — classificação `perigosa`:
+
+```json
+{
+  "url": "http://phishing-banco-teste.com",
+  "normalized_host": "phishing-banco-teste.com",
+  "score": 100,
+  "classification": "perigosa",
+  "reasons": [
+    "dominio_blocklist"
+  ]
+}
+```
+
+Também é possível explorar o contrato e enviar requisições pelo Swagger UI em
+[`http://localhost:8000/docs`](http://localhost:8000/docs).
+
 ## Evidências
 
 - Workflow de CI: [![CI](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml/badge.svg)](https://github.com/mariisena/phishguard-bootcamp-iii/actions/workflows/ci.yml) (`CI`, definido em `.github/workflows/ci.yml`).
@@ -182,8 +262,14 @@ Resposta real da API para esse exemplo:
 - Inspeção e correção de erros lógicos (#99): [docs/registro_correcoes/erros_logicos.md](docs/registro_correcoes/erros_logicos.md)
 - Re-especificação (#100): [docs/re_especificacao.md](docs/re_especificacao.md)
 - Diretrizes para agentes de IA: [docs/AI_AGENTS.md](docs/AI_AGENTS.md)
-- Análise comparativa de ferramentas de IA (#104): **LINK** - ainda não está adicionado na develop
+- Análise comparativa de ferramentas de IA (#104): [docs/relatorio_ia/analise_comparativa.md](docs/relatorio_ia/analise_comparativa.md)
 - Relatório de ética e segurança do uso de IA (#105): [docs/relatorio_ia/etica_seguranca.md](docs/relatorio_ia/etica_seguranca.md)
+
+## Release
+
+A Release `v3.0.0`:
+[Release v3.0.0](https://github.com/mariisena/phishguard-bootcamp-iii/releases/tag/v3.0.0). 
+O badge da CI já está no início deste README.
 
 ## Equipe
 
