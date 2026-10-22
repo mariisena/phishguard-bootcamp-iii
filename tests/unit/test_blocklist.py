@@ -1,6 +1,7 @@
 """RF-15 / RN-03 / RN-04 / N-07: listas locais de domínios."""
 
 import json
+import logging
 
 import pytest
 
@@ -89,6 +90,24 @@ def test_arquivos_ausentes_geram_listas_vazias(tmp_path):
     listas = load_domain_lists(tmp_path)
     assert listas.allowlist == frozenset()
     assert listas.blocklist == frozenset()
+
+
+def test_arquivo_ausente_emite_aviso(tmp_path, caplog):
+    # SDD §4.3 (Issue #133): a falta de uma lista não pode passar despercebida.
+    (tmp_path / "allowlist.json").write_text('["exemplo.com"]', encoding="utf-8")
+    load_domain_lists.cache_clear()
+    with caplog.at_level(logging.WARNING, logger="analyzer.blocklist"):
+        listas = load_domain_lists(tmp_path)
+    assert listas.blocklist == frozenset()
+    avisos = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(avisos) == 1
+    assert "blocklist.json" in avisos[0]
+
+
+def test_arquivos_presentes_nao_emitem_aviso(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING, logger="analyzer.blocklist"):
+        _escrever(tmp_path, ["exemplo.com"], [])
+    assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
 
 def test_json_malformado_levanta_erro(tmp_path):
