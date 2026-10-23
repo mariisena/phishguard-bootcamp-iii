@@ -4,7 +4,7 @@
 
 ## Entrega 1 (31/08 → 28/09)
 
-> O bloco termina em 28/09, data da última integração da `develop` na `main` antes do início da Entrega 2 ([PR #82](https://github.com/mariisena/phishguard-bootcamp-iii/pull/82)). A data exata de submissão acadêmica não consta no repositório.
+> O bloco termina em 28/09, data da última integração da `develop` na `main` antes do início da Entrega 2 ([PR #82](https://github.com/mariisena/phishguard-bootcamp-iii/pull/82)). A submissão acadêmica aconteceu em 13-09-2026
 
 | Data | Alteração | Motivo | Autor | Referência |
 | ---- | --------- | ------ | ----- | ---------- |
@@ -21,6 +21,11 @@
 | 11-09-2026 | Normalização de URLs, suporte a IDN e validação de esquema | Implementar as regras de normalização e cobrir casos de borda do SDD | [mariisena](https://github.com/mariisena) | [PR #54](https://github.com/mariisena/phishguard-bootcamp-iii/pull/54) |
 | 11-09-2026 | Implementação da camada HTTP e dos endpoints de análise | Expor `POST /api/v1/analyze` e `GET /health` conforme RF-01 e RF-16 | [mhsilvaworks](https://github.com/mhsilvaworks) | [PR #70](https://github.com/mariisena/phishguard-bootcamp-iii/pull/70) |
 | 12-09-2026 | Sincronização das listas fechadas e refinamento da RN-05 para leet speak | Manter o SDD consistente com a configuração validada e com os testes existentes | [anaacllara](https://github.com/anaacllara) | [Issue #58](https://github.com/mariisena/phishguard-bootcamp-iii/issues/58), [Issue #59](https://github.com/mariisena/phishguard-bootcamp-iii/issues/59) |
+
+## Entrega 2 (→ 17/10)
+
+| Data | Alteração | Motivo | Autor | Referência |
+| ---- | --------- | ------ | ----- | ---------- |
 | 14-09-2026 | Criação do README inicial com visão geral e instruções | Documentar o estado do projeto, sua execução e as ADRs para a entrega inicial | [anaacllara](https://github.com/anaacllara) | [PR #74](https://github.com/mariisena/phishguard-bootcamp-iii/pull/74) |
 | 17-09-2026 | Correção do exemplo JSON do SDD para usar a chave normativa | Remover divergência documental entre o exemplo e a Tabela 4.1, sem alterar código ou testes | [anaacllara](https://github.com/anaacllara) | [Issue #60](https://github.com/mariisena/phishguard-bootcamp-iii/issues/60), [PR #76](https://github.com/mariisena/phishguard-bootcamp-iii/pull/76) |
 | 22-09-2026 | Definição inicial das listas locais de allowlist e blocklist | Registrar escopo e conteúdo inicial das listas no SDD e na configuração | [anaacllara](https://github.com/anaacllara) | [Issue #61](https://github.com/mariisena/phishguard-bootcamp-iii/issues/61) |
@@ -28,11 +33,6 @@
 | 28-09-2026 | Cobertura da seção 7 do SDD e teste de tempo de resposta do scorer | Validar os casos de teste especificados e o requisito de desempenho | [anaacllara](https://github.com/anaacllara) | [PR #79](https://github.com/mariisena/phishguard-bootcamp-iii/pull/79), [PR #80](https://github.com/mariisena/phishguard-bootcamp-iii/pull/80) |
 | 28-09-2026 | Correção de referências a arquivos nas documentações e docstrings | Manter a documentação coerente com a estrutura real do código | [anaacllara](https://github.com/anaacllara) | [PR #81](https://github.com/mariisena/phishguard-bootcamp-iii/pull/81) |
 | 28-09-2026 | Integração da `develop` à `main` | Publicar na `main` as mudanças integradas até essa data; o PR não confirma a data de submissão acadêmica | [anaacllara](https://github.com/anaacllara) | [PR #82](https://github.com/mariisena/phishguard-bootcamp-iii/pull/82) |
-
-## Entrega 2 (→ 17/10)
-
-| Data | Alteração | Motivo | Autor | Referência |
-| ---- | --------- | ------ | ----- | ---------- |
 | 11-10-2026 | Remoção de `checked_at` da resposta e correção do módulo da API no Compose | Alinhar a resposta ao requisito de determinismo e corrigir o caminho de inicialização da API | [mariisena](https://github.com/mariisena) | [PR #86](https://github.com/mariisena/phishguard-bootcamp-iii/pull/86), [PR #87](https://github.com/mariisena/phishguard-bootcamp-iii/pull/87) |
 | 11-10-2026 | Revisão de consistência do SDD após a Entrega 1 | Corrigir divergências documentais sem alterar regras de negócio, pesos, limiares ou listas | [mariisena](https://github.com/mariisena) | [PR #85](https://github.com/mariisena/phishguard-bootcamp-iii/pull/85) |
 | 11-10-2026 | Versionamento dos documentos de acompanhamento | Tornar o checklist, a linha do tempo e o registro de correções parte do repositório | [mariisena](https://github.com/mariisena) | [PR #89](https://github.com/mariisena/phishguard-bootcamp-iii/pull/89), [Issue #84](https://github.com/mariisena/phishguard-bootcamp-iii/issues/84) |
@@ -56,7 +56,7 @@
 
 | Data | Alteração | Motivo | Autor | Referência |
 | ---- | --------- | ------ | ----- | ---------- |
-| A CONFIRMAR | Planejado: matriz comparativa das ferramentas de IA usadas pelo grupo | Registrar pontos fortes, limitações e impacto real de cada ferramenta com base nos relatos dos integrantes; ficou fora da tag `v2.0.0` | [anaacllara](https://github.com/anaacllara), [Henrique-GG](https://github.com/Henrique-GG) | [Issue #104](https://github.com/mariisena/phishguard-bootcamp-iii/issues/104) |
-| A CONFIRMAR | Planejado: montagem e submissão do PDF final | Consolidar identificação dos integrantes, relatório de testes, análise de IA e links de PRs para a etapa final | [mhsilvaworks](https://github.com/mhsilvaworks), [Henrique-GG](https://github.com/Henrique-GG) | [Issue #106](https://github.com/mariisena/phishguard-bootcamp-iii/issues/106) |
+| 22-10-2026 | Consolidação final da documentação e da pipeline de evidências da `v3.0.0` | Registrar a revisão as-built, a atualização do README da Etapa Final e o relatório final de testes antes da publicação na `main` | [mariisena](https://github.com/mariisena), [anaacllara](https://github.com/anaacllara) | [PR #143](https://github.com/mariisena/phishguard-bootcamp-iii/pull/143), [PR #144](https://github.com/mariisena/phishguard-bootcamp-iii/pull/144), [PR #145](https://github.com/mariisena/phishguard-bootcamp-iii/pull/145), [PR #147](https://github.com/mariisena/phishguard-bootcamp-iii/pull/147), [Issue #134](https://github.com/mariisena/phishguard-bootcamp-iii/issues/134), [Issue #136](https://github.com/mariisena/phishguard-bootcamp-iii/issues/136) |
+| 23-10-2026 | Release estável `v3.0.0` com merge final na `main` e GitHub Release vinculada ao commit aprovado | Encerrar a etapa final conforme o fluxo de release, com branch consolidada, protegida e sem pendências |[anaacllara](https://github.com/anaacllara), [mariisena](https://github.com/mariisena) | [Issue #138](https://github.com/mariisena/phishguard-bootcamp-iii/issues/138) |
 
 > Ao evoluir no projeto, mantenha as entregas concluídas como histórico e atualize os itens planejados somente quando houver evidência verificável no repositório.
